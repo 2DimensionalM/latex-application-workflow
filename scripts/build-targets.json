@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "targets": [
+    {
+      "alias": "resume-base",
+      "entry": "versions/cv/base/resume-base.tex",
+      "kind": "resume"
+    },
+    {
+      "alias": "letter-placeholder",
+      "entry": "versions/letter/targeted/cover-letter-placeholder.tex",
+      "kind": "letter"
+    }
+  ]
+}
+

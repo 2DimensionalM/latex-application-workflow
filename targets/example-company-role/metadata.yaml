@@ -1,0 +1,10 @@
+# Schema example only. Do not put real application data in this committed folder.
+internal_id: "000"
+company: "Example Company"
+role: "Example Role"
+location: "Example City"
+source_url: "https://example.invalid/jobs/example-role"
+status: "draft"
+resume_version: ""
+cover_letter_version: ""
+

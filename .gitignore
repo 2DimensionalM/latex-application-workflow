@@ -1,0 +1,29 @@
+# Private candidate data
+content/master/
+src/sections/header.private.tex
+
+# Real job packages: keep only the committed example package
+targets/*/
+!targets/example-company-role/
+!targets/example-company-role/**
+
+# Generated artifacts
+output/**
+!output/.gitkeep
+*.pdf
+*.aux
+*.log
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Local environments and editor files
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+*.swp
+*~
+

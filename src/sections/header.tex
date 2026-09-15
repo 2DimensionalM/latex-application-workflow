@@ -1,0 +1,7 @@
+% Keep real contact details in the ignored header.private.tex file.
+\IfFileExists{sections/header.private.tex}{%
+  \input{sections/header.private}%
+}{%
+  \input{sections/header.template}%
+}
+
