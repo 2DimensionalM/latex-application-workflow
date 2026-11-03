@@ -1,9 +1,9 @@
 ---
 name: targeted-resume
-description: Draft, compile, and visually QA a single-page targeted LaTeX resume from the universal baseline and role tailoring plan (制作定向简历与单页留白QA). Use when the user asks to write, customize, or build a targeted resume/CV ("写简历", "制作定向简历", "编译简历") for a specific job target.
+description: Draft, compile, and visually QA a single-page targeted LaTeX resume from the universal baseline and role tailoring plan. Use when the user asks to write, customize, or build a targeted resume/CV for a specific job target.
 ---
 
-# Step 3: Targeted Resume Drafting & 1-Page Visual QA (定向简历制作与单页留白 QA)
+# Stage 3: Targeted Resume Drafting & 1-Page Visual QA
 
 ## When to Use
 
@@ -24,7 +24,7 @@ Task Progress:
 - [ ] Step 4: Tailor Profile, Education, Experience bullets, and Skills per `tailoring.md` and `.agent/rules/content.md`
 - [ ] Step 5: Run `./scripts/build.sh resume:<id>` and inspect `qa.json` (must be 1 page, 0 LaTeX errors)
 - [ ] Step 6: Render PNG via `pdftoppm` and visually verify page density (if <80% height / bottom whitespace, backfill & recompile)
-- [ ] Step 7: Update `PROJECT_STATUS.md` stage (`写简历` / `审核简历` / `待投递`) and run `python3 scripts/workspace.py check`
+- [ ] Step 7: Update `PROJECT_STATUS.md` stage (`Drafting Resume` / `Reviewing Resume` / `Ready to Apply`) and run `python3 scripts/workspace.py check`
 ```
 
 ---
@@ -70,7 +70,7 @@ Read `/tmp/cv-review-<id>-1.png` using the Read tool to inspect the visual layou
   4. Merge two closely related bullets while preserving core facts.
   *(Never delete an entire employer `\cvexpblock` or drop whole bullets without explicit authorization in `tailoring.md` or from the user.)*
 - **Case B — 1 page, but visible bottom whitespace (`body_end_fraction < 0.80` or bottom looks empty)**:
-  **Do not deliver a top-heavy page with a blank bottom!** Immediately backfill from `targets/<slug>/tailoring.md` → `content/master/` → `jd.md`:
+  **Do not deliver a top-heavy page with a blank bottom!** Immediately backfill from `targets/<slug>/tailoring.md` -> `content/master/` -> `jd.md`:
   1. Restore or expand factual density in existing experience bullets (tools, delivery surface, verified outcomes);
   2. Expand `Education` coursework/thesis notes or `Profile` / `Skills` lines;
   3. Recompile and re-inspect the PNG until the page is 1 page and visually balanced.

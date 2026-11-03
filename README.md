@@ -1,123 +1,124 @@
 # LaTeX Application Workflow
 
-一套**隐私优先（Privacy-First）、跨 Agent 通用（`.agent/` + `AGENTS.md` + `CLAUDE.md`）、自动化 Harness 驱动**的 LaTeX 英文简历与求职信（CV & Cover Letter）工程化工作流。
+A **privacy-first, agent-agnostic (`.agent/` + `AGENTS.md` + `CLAUDE.md`), harness-driven** LaTeX workflow for engineering targeted English resumes (CVs) and cover letters.
 
-本项目将**候选人事实资产（`content/master/`）**、**唯一跨市场通用基线（`baseline-universal.tex`）**、**单岗预写决策（`targets/<slug>/tailoring.md`）**与**定向 LaTeX 编译及 PDF 视觉/版面自动 QA（`scripts/workspace.py`）**解耦，并将从「岗位链接进项目」到「发布投递与状态追踪」的每一步沉淀为跨工具通用的 `.agent/skills/` 与 `.agent/rules/`，支持 Claude Code、Codex、Cursor、OpenCode 等任意 Agent 及用户 Fork 后直接上手与扩展。
+This repository decouples **candidate master facts (`content/master/`)**, **a single cross-market Universal CV Baseline (`baseline-universal.tex`)**, **role-specific pre-writing plans (`targets/<slug>/tailoring.md`)**, and **isolated LaTeX compilation with automated PDF layout QA (`scripts/workspace.py`)**. Every phase—from job URL intake to snapshot publishing and status tracking—is codified into standardized, portable Agent Skills under `.agent/skills/` and domain rules under `.agent/rules/`, ready to fork and extend across Claude Code, Codex, Cursor, OpenCode, or any other coding agent.
 
 ---
 
-## 一、快速上手（Fork 后 3 步初始化）
+## 1. Quick Start (3 Steps After Forking)
 
-### 环境要求
+### Prerequisites
 - Python 3.10+
-- TeX Live 或 TinyTeX（提供 `pdflatex`）
-- Poppler（推荐，提供 `pdftoppm` 供 Agent 渲染 PDF 页面进行目视 QA）
+- TeX Live or TinyTeX (`pdflatex`)
+- Poppler (recommended; provides `pdftoppm` for visual PNG inspection)
 
-### 初始化命令
+### Onboarding Commands
 
 ```bash
-# 1. 创建虚拟环境并安装校验/QA依赖（PyYAML, pdfplumber）
+# 1. Create a virtual environment and install validation/QA dependencies (PyYAML, pdfplumber)
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 
-# 2. 一键生成本地私有文件（从 *.example.md 生成 content/master/*.md，并生成 src/sections/header.private.tex）
+# 2. Bootstrap local untracked files (creates content/master/*.md and src/sections/header.private.tex from .example templates)
 .venv/bin/python scripts/workspace.py bootstrap
 
-# 3. 校验工作区一致性并编译通用 CV 基线与五段式求职信模板
+# 3. Validate workspace invariants and compile the Universal CV Baseline & 5-paragraph cover letter template
 .venv/bin/python scripts/workspace.py check
 ./scripts/build.sh baseline
 ./scripts/build.sh letter-placeholder
 ```
 
-- 构建默认输出至隔离目录 `output/review/<JOBNAME>/`（包含 `<JOBNAME>.pdf`、`build.log`、`latex.log` 与自动版面检测报告 `qa.json`）。
-- 编辑 `src/sections/header.private.tex` 填入真实姓名与联系方式（该文件已被 `.gitignore` 忽略且禁止 Agent 读取）。
-- 编辑 `content/master/*.md` 填入你的真实教育、经历、项目、技能与证书事实（同样被 `.gitignore` 忽略，永不上传）。
+- Builds output to isolated review directories under `output/review/<JOBNAME>/` (`<JOBNAME>.pdf`, `build.log`, `latex.log`, and `qa.json`).
+- Edit `src/sections/header.private.tex` with your real name and contact details (gitignored and strictly off-limits to agents).
+- Edit `content/master/*.md` with your verified education, experience, projects, skills, and credentials (also gitignored and never uploaded).
 
 ---
 
-## 二、Agentic Workflow 全流程与标准化 Skills (`.agent/skills/`)
+## 2. Six-Stage Agentic Workflow & Standardized Skills (`.agent/skills/`)
 
-本仓库在 `.agent/skills/` 下沉淀了 **6 个标准化阶段技能**，通过根入口 `AGENTS.md`（以及 `CLAUDE.md` 和 `.cursor/rules/project-memory.mdc` 路由壳）实现按需加载：
+The workflow is organized into **6 standardized stage skills** under `.agent/skills/`, routed on demand via `AGENTS.md`, `CLAUDE.md`, and `.cursor/rules/project-memory.mdc`:
 
 ```
-[Stage 0: 母版与通用基线维护]  (.agent/skills/master-and-baseline/SKILL.md)
-   content/master/*.md (唯一事实源 SoT) ──(显式刷新)──► src/sections/baseline-universal.tex (唯一一页父本)
-          │
-          ▼
-[Stage 1: 岗位链接/JD进项目]   (.agent/skills/job-intake/SKILL.md)
-   `workspace.py init` 分配三位编号 001..999 ──► 建立 targets/<slug>/{metadata.yaml, jd.md, notes.md, tailoring.md}
-   并同步 PROJECT_STATUS.md 主表新行（进展 = 待预写）
-          │
-          ▼
-[Stage 2: 岗位预写与证据映射]  (.agent/skills/job-prewrite/SKILL.md)
-   对照 jd.md + notes.md + content/master/ ──► 撰写 targets/<slug>/tailoring.md 六大模块（严禁跳过预写直接改 LaTeX）
-          │
-          ├───────────────────────────────────────────────────┐
-          ▼                                                   ▼
-[Stage 3: 定向简历制作与 QA]                                [Stage 4: 定向求职信制作与 QA]
-(.agent/skills/targeted-resume/SKILL.md)                   (.agent/skills/targeted-cover-letter/SKILL.md)
- - 从 baseline-universal.tex 分叉                           - 基于 tailoring.md 五段提纲创建信件正文
- - 严格保持 Experience 时间倒序                              - 拒绝“简历散文复述”，强制包含第 4 段前瞻切入计划
- - `./scripts/build.sh resume:<id>`                        - `./scripts/build.sh letter:<id>`
- - 强制单页 + 正文底端 ≥80% 页高（留白自动回补闭环）          - 强制单页 + 正文底端 ≥60% 页高实测闭环
-          │                                                   │
-          └─────────────────────────┬─────────────────────────┘
-                                    ▼
-[Stage 5: 成品发布与状态追踪]  (.agent/skills/status-and-publish/SKILL.md)
-   `./scripts/build.sh <target> --publish` 发布防覆盖快照 ──► 更新 PROJECT_STATUS.md 产物链接、分组行序与历史动作时间线
+[Stage 0: Master & Baseline Maintenance]  (.agent/skills/master-and-baseline/SKILL.md)
+   content/master/*.md (Single Source of Truth) --(explicit refresh)--> src/sections/baseline-universal.tex (Single 1-Page Parent)
+          |
+          v
+[Stage 1: Job URL & JD Intake]            (.agent/skills/job-intake/SKILL.md)
+   `workspace.py init` allocates 3-digit ID (001..999) --> scaffolds targets/<slug>/{metadata.yaml, jd.md, notes.md, tailoring.md}
+   and inserts a new row into PROJECT_STATUS.md (Status = Pending Pre-write)
+          |
+          v
+[Stage 2: Role Pre-writing & Mapping]     (.agent/skills/job-prewrite/SKILL.md)
+   Cross-maps jd.md + notes.md + content/master/ --> populates all 6 mandatory sections of targets/<slug>/tailoring.md
+   (Never skip pre-writing to edit LaTeX directly)
+          |
+          +---------------------------------------------------+
+          v                                                   v
+[Stage 3: Targeted Resume & QA]                             [Stage 4: Targeted Cover Letter & QA]
+(.agent/skills/targeted-resume/SKILL.md)                    (.agent/skills/targeted-cover-letter/SKILL.md)
+ - Fork from baseline-universal.tex                          - Draft 5-paragraph letter from tailoring.md plan
+ - Enforce strict reverse-chronological Experience order     - No prose recap of resume; mandatory Paragraph 4 execution plan
+ - `./scripts/build.sh resume:<id>`                          - `./scripts/build.sh letter:<id>`
+ - Enforce 1 page + >=80% height (bottom-whitespace loop)    - Enforce 1 page + >=60% body height (`Dear` to `Sincerely,`)
+          |                                                   |
+          +-------------------------+-------------------------+
+                                    v
+[Stage 5: Publish Snapshots & Sync Status] (.agent/skills/status-and-publish/SKILL.md)
+   `./scripts/build.sh <target> --publish` writes immutable PDFs --> updates PROJECT_STATUS.md links, 3-tier row group order & history
 ```
 
-| 阶段 | Skill 路径 | 触发场景示例 | 核心产出与门禁 |
+| Stage | Skill Path | Typical Trigger | Core Deliverable & Quality Gate |
 |---|---|---|---|
-| **0. 母版与基线** | [`.agent/skills/master-and-baseline/SKILL.md`](.agent/skills/master-and-baseline/SKILL.md) | “初始化项目”、“把这段新实习加进 master”、“刷新通用 baseline” | 更新 `content/master/*.md` 或 `baseline-universal.tex` |
-| **1. 链接进项目** | [`.agent/skills/job-intake/SKILL.md`](.agent/skills/job-intake/SKILL.md) | “把这个招聘链接进项目”、“登记这三条岗位 URL” | 分配 `internal_id`、生成结构化英文 `jd.md` 与 `notes.md`、更新 `PROJECT_STATUS.md` |
-| **2. 岗位预写** | [`.agent/skills/job-prewrite/SKILL.md`](.agent/skills/job-prewrite/SKILL.md) | “帮我预写 001 岗位”、“做 001 的 tailoring 规划” | 完成 `targets/<slug>/tailoring.md` 六大模块映射 |
-| **3. 定向简历** | [`.agent/skills/targeted-resume/SKILL.md`](.agent/skills/targeted-resume/SKILL.md) | “写 001 的定向简历”、“编译并检查 001 简历留白” | 生成 `{id}-resume-....tex`、通过 1 页 + ≥80% 页面填充度 QA |
-| **4. 定向求职信** | [`.agent/skills/targeted-cover-letter/SKILL.md`](.agent/skills/targeted-cover-letter/SKILL.md) | “写 001 的求职信 / cover letter” | 生成 `{id}-cover-letter-....tex`、五段式结构、通过 ≥60% 正文高度 QA |
-| **5. 发布与状态** | [`.agent/skills/status-and-publish/SKILL.md`](.agent/skills/status-and-publish/SKILL.md) | “发布 001 的 PDF”、“001 已投递 / 收到一面 / 已拒” | `--publish` 写入正式目录、更新 `PROJECT_STATUS.md` 分组排序与历史表 |
+| **0. Master & Baseline** | [`.agent/skills/master-and-baseline/SKILL.md`](.agent/skills/master-and-baseline/SKILL.md) | Onboarding repo, adding new experience/grades to master, refreshing universal baseline | Updated `content/master/*.md` or `baseline-universal.tex` |
+| **1. Job Intake** | [`.agent/skills/job-intake/SKILL.md`](.agent/skills/job-intake/SKILL.md) | Adding one or more job posting URLs or JDs into the project | Allocated `internal_id`, structured English `jd.md` & `notes.md`, synced `PROJECT_STATUS.md` |
+| **2. Role Pre-writing** | [`.agent/skills/job-prewrite/SKILL.md`](.agent/skills/job-prewrite/SKILL.md) | Pre-writing `tailoring.md` and mapping evidence for a target role | Completed 6-section `targets/<slug>/tailoring.md` |
+| **3. Targeted Resume** | [`.agent/skills/targeted-resume/SKILL.md`](.agent/skills/targeted-resume/SKILL.md) | Drafting, compressing, or backfilling a targeted resume for a role | `{id}-resume-....tex` passing 1-page + >=80% density visual QA |
+| **4. Targeted Cover Letter** | [`.agent/skills/targeted-cover-letter/SKILL.md`](.agent/skills/targeted-cover-letter/SKILL.md) | Drafting or revising a role-specific cover letter | `{id}-cover-letter-....tex` with 5 paragraphs passing >=60% body-height QA |
+| **5. Publish & Status** | [`.agent/skills/status-and-publish/SKILL.md`](.agent/skills/status-and-publish/SKILL.md) | Publishing final PDFs or recording applied/interview/rejected/closed events | Immutable PDFs via `--publish`, updated `PROJECT_STATUS.md` group order & dated history |
 
 ---
 
-## 三、跨工具通用 Context Architecture (`.agent/` + `AGENTS.md` + `CLAUDE.md`)
+## 3. Agent-Agnostic Context Architecture (`.agent/` + `AGENTS.md` + `CLAUDE.md`)
 
-所有长期记忆、领域规则与技能统一采用纯 Markdown 维护在 **`.agent/`** 下，不依赖任何特定编辑器的私有格式：
+All long-term memory, domain rules, and workflow skills are written in standard Markdown under **`.agent/`**, avoiding lock-in to any single editor's rule format:
 
-| 文档路径 | 职责说明 |
+| Path | Purpose |
 |---|---|
-| [`AGENTS.md`](AGENTS.md) | 跨工具通用根入口：核心安全红线、Git 提交策略与 6 阶段任务路由表 |
-| [`CLAUDE.md`](CLAUDE.md) | Claude Code 入口路由，指向 `AGENTS.md` 与 `.agent/` |
-| [`.cursor/rules/project-memory.mdc`](.cursor/rules/project-memory.mdc) | Cursor 薄路由壳（仅指向 `AGENTS.md` 与 `.agent/`，不存储长期记忆） |
-| [`.agent/README.md`](.agent/README.md) | `.agent/` 上下文架构总览（多 Agent 路由图、Skills 与 Rules 索引） |
-| [`.agent/rules/general.md`](.agent/rules/general.md) | 核心工程原则、四层信息归属与长期记忆更新策略 |
-| [`.agent/rules/intake.md`](.agent/rules/intake.md) | 招聘 URL 抓取、ATS 解析技巧、开放状态交叉验证与非英语 JD 翻译规范 |
-| [`.agent/rules/tailoring.md`](.agent/rules/tailoring.md) | 定制六步顺序与 `tailoring.md` 六大模块标准 |
-| [`.agent/rules/content.md`](.agent/rules/content.md) | 母版事实记录规范、简历单页压缩与留白回补闭环、求职信五段结构与 ≥60% 高度铁律 |
-| [`.agent/rules/status.md`](.agent/rules/status.md) | `PROJECT_STATUS.md` 9 列总表、3 级状态分组移动规则与 4 列历史表规范 |
-| [`.agent/rules/structure.md`](.agent/rules/structure.md) | LaTeX 宏与三层分离架构（`src/` vs `versions/`） |
-| [`.agent/rules/build.md`](.agent/rules/build.md) | 隔离构建、自动 PDF/Log QA 与快照防覆盖发布机制 |
-| [`STRUCTURE.md`](STRUCTURE.md) | 目录职责、五层数据流与文件命名/编号不变量 |
-| [`RESUME_BASELINE.md`](RESUME_BASELINE.md) | 唯一跨市场 CV 基线的定义、刷新边界与分叉规范 |
-| [`PROJECT_STATUS.md`](PROJECT_STATUS.md) | 标准化的 9 列岗位总表 + 4 列带日期历史动作时间线 |
-| [`content/master/README.md`](content/master/README.md) | 候选人事实库（SoT）维护规范与 6 个 `*.example.md` 模板说明 |
-| [`targets/README.md`](targets/README.md) | 岗位目标包四件套契约与 `metadata.yaml` Schema |
-| [`scripts/README.md`](scripts/README.md) | `workspace.py`、`build.sh`、`build_all.py`、`privacy_check.py` 完整命令手册 |
+| [`AGENTS.md`](AGENTS.md) | Universal root entry point: safety guardrails, Git policy, and the 6-stage routing table |
+| [`CLAUDE.md`](CLAUDE.md) | Claude Code entry router pointing to `AGENTS.md` and `.agent/` |
+| [`.cursor/rules/project-memory.mdc`](.cursor/rules/project-memory.mdc) | Thin 10-line Cursor router pointing to `AGENTS.md` and `.agent/` |
+| [`.agent/README.md`](.agent/README.md) | Overview of the `.agent/` Context Architecture hub |
+| [`.agent/rules/general.md`](.agent/rules/general.md) | Core engineering principles, 4-tier information ownership, and long-term memory update policy |
+| [`.agent/rules/intake.md`](.agent/rules/intake.md) | Job URL intake, ATS extraction patterns, open/closed verification, and non-English JD translation rules |
+| [`.agent/rules/tailoring.md`](.agent/rules/tailoring.md) | The 6-step customization sequence and mandatory 6-section `tailoring.md` specification |
+| [`.agent/rules/content.md`](.agent/rules/content.md) | Master fact dimensions, 1-page resume compression & bottom-whitespace backfill loop, and 5-paragraph cover letter >=60% height rules |
+| [`.agent/rules/status.md`](.agent/rules/status.md) | `PROJECT_STATUS.md` 9-column schema, `metadata.yaml` status mapping, 3-tier row grouping order, and 4-column history table rules |
+| [`.agent/rules/structure.md`](.agent/rules/structure.md) | LaTeX macro & 3-tier file decoupling (`src/` vs. `versions/`) |
+| [`.agent/rules/build.md`](.agent/rules/build.md) | Isolated review builds, automated PDF/Log QA gates, and `--publish` snapshot overwrite protection |
+| [`STRUCTURE.md`](STRUCTURE.md) | Directory layout, 5-layer data flow, and naming/ID invariants |
+| [`RESUME_BASELINE.md`](RESUME_BASELINE.md) | Definition, refresh policy, and forking guide for the single Universal CV Baseline |
+| [`PROJECT_STATUS.md`](PROJECT_STATUS.md) | Standardized 9-column Application Pipeline table + 4-column dated Activity History table |
+| [`content/master/README.md`](content/master/README.md) | Candidate Master Fact Layer (SoT) guide and inventory of the 6 `*.example.md` templates |
+| [`targets/README.md`](targets/README.md) | Target quartet contract and `metadata.yaml` schema |
+| [`scripts/README.md`](scripts/README.md) | Full CLI reference for `workspace.py`, `build.sh`, `build_all.py`, and `privacy_check.py` |
 
 ---
 
-## 四、隐私安全模型（Privacy by Design）
+## 4. Privacy Model (Privacy by Design)
 
-1. **私有文件默认隔离**：
-   - `src/sections/header.private.tex`（真实姓名、地址、电话、邮箱、个人主页链接）
-   - `content/master/*.md`（真实个人履历事实库，仅跟踪 `README.md` 与 `*.example.md`）
-   - `targets/<slug>/`（真实申请岗位包，仅跟踪 `targets/example-company-role/`）
-   - `versions/cv/targeted/*.tex`、`src/sections/targeted-*.tex`、`src/sections/letters/targeted-*.tex`
-   - `output/**`（所有编译生成的 PDF 与日志）
-   - 本地特定目录（如 `cn-campus-2027/`、`_inbox/`、`nuffic/`）
-2. **提交前强制门禁**：
-   每次 `git commit` / `git push` 前运行：
+1. **Untracked Private & Local Paths**:
+   - `src/sections/header.private.tex` (real name, address, phone, email, personal profile links)
+   - `content/master/*.md` (real candidate master facts; only `README.md` and `*.example.md` are tracked)
+   - `targets/<slug>/` (real job target packages; only `targets/example-company-role/` is tracked)
+   - `versions/cv/targeted/*.tex`, `src/sections/targeted-*.tex`, `src/sections/letters/targeted-*.tex`
+   - `output/**` (all compiled PDFs and logs)
+   - Local sub-workspaces (`cn-campus-2027/`, `_inbox/`, `nuffic/`)
+2. **Mandatory Pre-Commit Gate**:
+   Run before every `git commit` / `git push`:
    ```bash
    .venv/bin/python scripts/privacy_check.py
    .venv/bin/python scripts/workspace.py check
    .venv/bin/python -m unittest discover -s scripts/tests -v
    ```
-   `privacy_check.py` 会扫描所有已跟踪和已暂存文件，一旦发现被禁止的私有路径、二进制/PDF 文件、邮箱地址、电话号码或密钥即刻报错阻断。
+   `privacy_check.py` inspects all tracked and staged files and fails immediately if any private path, binary/PDF artifact, email address, phone number, GitHub token, or private key is detected.

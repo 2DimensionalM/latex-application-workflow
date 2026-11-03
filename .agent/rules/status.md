@@ -1,77 +1,79 @@
-# `PROJECT_STATUS.md` 标准化与联动规范 (Status Tracking & Sync Rules)
+# `PROJECT_STATUS.md` Standardization & Synchronization Rules (`status.md`)
 
-> 适用场景：新增岗位、更新简历/求职信产物链接、记录投递/面试/拒信/下架等求职进展。对应标准化 Skill：`.agent/skills/status-and-publish/SKILL.md`。
-
----
-
-## 一、`PROJECT_STATUS.md` 的定位与纯净性约束
-
-1. **职责边界**：根目录 `PROJECT_STATUS.md` 仅维护两张人类可读、可直接编辑的标准化表格：
-   - **岗位总表（当前快照）**：与 `targets/<slug>/` 下的真实岗位包（不含 `example-company-role` 模板）保持严格的 **1 对 1** 关系。
-   - **历史动作（带日期）**：按日期倒序记录每一次真实求职事件（投递、测评、一面、二面、补材料、offer、拒信、下架）。
-2. **禁止写入 `PROJECT_STATUS.md` 的内容**：
-   - 不在表内增加「备注」列（岗位细节、待核实项、帖重开说明一律写在 `targets/<slug>/notes.md` 或 `tailoring.md`）；
-   - 不在文件中堆砌长篇维护说明或某轮批量修改日志；
-   - 表头与链接文案不使用「PDF」字样，统一使用 **简历**、**求职信**。
+> Applicable when adding a new job target, linking published resume/cover letter PDFs, or updating application progress (applied, OA, interview, offer, rejected, closed). Associated skill: `.agent/skills/status-and-publish/SKILL.md`.
 
 ---
 
-## 二、岗位总表（9 列标准 Schema）
+## 1. Role & Cleanliness Guardrails for `PROJECT_STATUS.md`
+
+1. **Scope**: Root `PROJECT_STATUS.md` maintains exactly two human-editable tables:
+   - **Application Pipeline (`## Application Pipeline (Current Snapshot)`)**: Strict **1-to-1** mapping with real target packages under `targets/<slug>/` (excluding the `example-company-role` template).
+   - **Activity History (`## Activity History (Dated Events)`)**: Reverse-chronological log of verified application events (applied, OA, interviews, follow-up docs, offer, rejection, job closed).
+2. **Forbidden in `PROJECT_STATUS.md`**:
+   - Do not add a free-text `Notes` or `Remarks` column (put role nuances, logistics checks, and re-opening notes inside `targets/<slug>/notes.md` or `tailoring.md`).
+   - Do not paste long rule explanations or batch change logs above the table.
+   - Use clean link labels `Resume` and `Cover Letter` without appending `"PDF"` to column headers or link text.
+
+---
+
+## 2. Main Table Schema (9 Columns)
 
 ```markdown
-| 编号 | 公司 | 岗位 | 地点 | 招聘页 | JD | 进展 | 简历 | 求职信 |
-|------|------|------|--------|--------|-----|------|----------|------------|
+| ID | Company | Role | Location | Posting | JD | Status | Resume | Cover Letter |
+|---|---|---|---|---|---|---|---|---|
 ```
 
-| 列序号 | 列名 | 规范与校验约束 |
+| Col # | Column Header | Contract & Validation Rule |
 |---|---|---|
-| 1 | `编号` | 三位零填充数字字符串（`001`–`999`），与 `targets/<slug>/metadata.yaml` 的 `internal_id` 及定向文件名前缀完全一致。按入仓先后递增分配，**旧号永不重编或回收**。 |
-| 2 | `公司` | 与 `metadata.yaml` 的 `company` 对应（允许合理人类可读简称）。 |
-| 3 | `岗位` | 与 `metadata.yaml` 的 `role` 对应（可附括号标注雇主 Job ID，如 `（J-001234）`；若标题含 `|` 需写成 `\|`）。 |
-| 4 | `地点` | 与 `metadata.yaml` 的 `location` 或 `location.display` 对应。 |
-| 5 | `招聘页` | Markdown 外链 `[链接](https://...)`，指向 `metadata.yaml` 的 `source_url` 或 `source`。 |
-| 6 | `JD` | 仓库内相对链接 `[JD](targets/<slug>/jd.md)`，点击即可在 IDE 打开该岗结构化 JD。 |
-| 7 | `进展` | 必须属于该岗 `metadata.yaml` 中 `status` 字段允许的对应词集合（见下表）。 |
-| 8 | `简历` | 定稿并 `--publish` 后写 `[简历](output/cv/targeted/{id}-resume-....pdf)`；尚未定稿发布时写 `—`。 |
-| 9 | `求职信` | 定稿并 `--publish` 后写 `[求职信](output/cover-letters/pdf/targeted/{id}-cover-letter-....pdf)`；无求职信或未发布时写 `—`。 |
+| 1 | `ID` | 3-digit zero-padded string (`001`–`999`), matching `internal_id` in `targets/<slug>/metadata.yaml` and targeted filename prefixes. Allocated sequentially (`max + 1`); **never renumbered or recycled**. |
+| 2 | `Company` | Matches `company` in `metadata.yaml` (human-readable abbreviations allowed). |
+| 3 | `Role` | Matches `role` in `metadata.yaml` (may append employer Job ID in parentheses, e.g., `(REQ-1001)`; escape literal pipes as `\|`). |
+| 4 | `Location` | Matches `location` or `location.display` in `metadata.yaml`. |
+| 5 | `Posting` | External link `[Link](https://...)` pointing to `source_url` or `source` in `metadata.yaml`. |
+| 6 | `JD` | Workspace-relative link `[JD](targets/<slug>/jd.md)` opening the local structured English JD. |
+| 7 | `Status` | Must belong to the allowed status label set for the target's `metadata.yaml` `status` value (see mapping table below). |
+| 8 | `Resume` | After `--publish`, link `[Resume](output/cv/targeted/{id}-resume-....pdf)`; before publishing, use `—`. |
+| 9 | `Cover Letter` | After `--publish`, link `[Cover Letter](output/cover-letters/pdf/targeted/{id}-cover-letter-....pdf)`; if none or unpublished, use `—`. |
 
 ---
 
-## 三、`metadata.yaml` 状态枚举与「进展」列映射契约
+## 3. `metadata.yaml` Status Enum & Main Table Status Mapping
 
-`scripts/workspace.py check` 强制校验 `metadata.yaml` 的 `status` 与 `PROJECT_STATUS.md` 的「进展」列是否匹配（同时支持中文标准词与英文标准词）：
+`scripts/workspace.py check` enforces consistency between `metadata.yaml` `status` and the `Status` column in `PROJECT_STATUS.md`:
 
-| `metadata.yaml` `status` | `PROJECT_STATUS.md` 允许的「进展」文案 | 所属排序分组 |
+| `metadata.yaml` `status` | Allowed `PROJECT_STATUS.md` `Status` Labels | Row Sorting Group |
 |---|---|---|
-| `draft` | `待核实` / `待预写` / `写简历` / `写求职信` / `审核简历` / `审核求职信` / `待投递`（或英文 `Pending Verification` / `Pending Pre-write` / `Drafting Resume` / `Drafting Letter` / `Reviewing Resume` / `Reviewing Letter` / `Ready to Apply`） | **第 1 组（准备与制作中）** |
-| `open` | `待预写` / `写简历` / `写求职信` / `审核简历` / `审核求职信` / `待投递`（或对应英文） | **第 1 组（准备与制作中）** |
-| `applied` | `已投递` / `补材料`（或 `Applied` / `Follow-up Docs`） | **第 2 组（已投递与流程中）** |
-| `interviewing` | `一面` / `二面` / `终面` / `补材料`（或 `Interview` / `Round 1` / `Round 2` / `Final Round` / `Follow-up Docs`） | **第 2 组（已投递与流程中）** |
-| `offer` | `已拿 offer`（或 `Offer`） | **第 3 组（结果与终结态）** |
-| `rejected` | `已拒`（或 `Rejected`） | **第 3 组（结果与终结态）** |
-| `closed` | `已下架`（或 `Closed`） | **第 3 组（结果与终结态）** |
+| `draft` | `Pending Verification`, `Pending Pre-write`, `Drafting Resume`, `Drafting Letter`, `Reviewing Resume`, `Reviewing Letter`, `Ready to Apply` | **Group 1 (Preparation & Drafting)** |
+| `open` | `Pending Pre-write`, `Drafting Resume`, `Drafting Letter`, `Reviewing Resume`, `Reviewing Letter`, `Ready to Apply` | **Group 1 (Preparation & Drafting)** |
+| `applied` | `Applied`, `Follow-up Docs` | **Group 2 (Submitted & Active Pipeline)** |
+| `interviewing` | `OA`, `Interview`, `Round 1`, `Round 2`, `Final Round`, `Follow-up Docs` | **Group 2 (Submitted & Active Pipeline)** |
+| `offer` | `Offer` | **Group 3 (Terminal Outcomes)** |
+| `rejected` | `Rejected` | **Group 3 (Terminal Outcomes)** |
+| `closed` | `Closed` | **Group 3 (Terminal Outcomes)** |
+
+*(Bilingual compatibility: `workspace.py` also accepts the equivalent Chinese status labels when validating existing workspaces.)*
 
 ---
 
-## 四、主表行分组排序规则（修改进展时必须同步移动行位置）
+## 4. Three-Tier Row Grouping Order (Move Rows on Status Change)
 
-主表行顺序**不按编号死排**，而是严格按上述 **3 个进展分组** 从上到下排列：
-1. **第 1 组（表顶部）**：`待核实`、`待预写`、`写简历`、`写求职信`、`审核简历`、`审核求职信`、`待投递` 等尚未提交的材料准备阶段；
-2. **第 2 组（表中部）**：`已投递`、`一面`、`二面`、`终面`、`补材料` 等正在推进的申请流程（最近投递或最近更新的可排在组前）；
-3. **第 3 组（表底部）**：`已拿 offer`、`已拒`、`已下架` 等终结态（整段排在表末，绝不与第 1、2 组混排）。
+Rows in the main table are **ordered by status group**, not by numerical `ID`:
+1. **Group 1 (Top of table)**: Active preparation and material drafting (`Pending Verification`, `Pending Pre-write`, `Drafting Resume`, `Drafting Letter`, `Reviewing Resume`, `Reviewing Letter`, `Ready to Apply`);
+2. **Group 2 (Middle of table)**: Submitted applications and active interviews (`Applied`, `OA`, `Interview`, `Round 1`, `Round 2`, `Final Round`, `Follow-up Docs`), with most recently submitted/updated rows near the top of the group;
+3. **Group 3 (Bottom of table)**: Terminal states (`Offer`, `Rejected`, `Closed`) grouped together at the bottom, never mixed into Groups 1 or 2.
 
-> **强制动作**：当某岗位的进展发生跨组变化（例如从 `待投递` 变为 `已投递`，或从 `已投递` 变为 `已拒`）时，**必须在同一轮修改中将该行移动到目标分组区域**，不能只改单元格文字而留在原位置。
+> **Mandatory Rule**: Whenever a target's status transitions across groups (e.g., from `Ready to Apply` to `Applied`, or from `Applied` to `Rejected`), **move the entire row to the target group in the same edit**. Never update the `Status` cell text while leaving the row in its old group position.
 
 ---
 
-## 五、历史动作表（4 列标准 Schema 与记法）
+## 5. Activity History Table (4-Column Schema & Ordering)
 
 ```markdown
-| 日期 | 公司 | 岗位（或编号） | 动作 |
-|------|------|----------------|------|
-| 2026-11-03 | Example Corp | 001（REQ-1001，Data & AI Engineer Intern） | 已投递 |
+| Date | Company | Role (or ID) | Event |
+|---|---|---|---|
+| 2026-11-03 | Example Corp | 001 (REQ-1001, Data & AI Engineer Intern) | Applied |
 ```
 
-- **记什么**：仅记录已真实发生的求职节点（如 `已投递`、`已完成 OA`、`一面`、`二面`、`补材料`、`已拒`、`已下架`、`已拿 offer`）。仅在本地编译 PDF 或完成预写不记入历史动作表。
-- **怎么排**：**最新发生的事件永远插在表头下方第一行**（严格按日期倒序）。日期格式统一为 `YYYY-MM-DD`。
-- **一致性**：某岗位在历史动作表最新一条的状态，应与上方「岗位总表」该行的当前「进展」保持一致。
+- **What to record**: Only verified real-world application events (`Applied`, `Completed OA`, `Round 1 Interview`, `Round 2 Interview`, `Follow-up Docs Sent`, `Offer`, `Rejected`, `Closed`). Local LaTeX builds or pre-writing edits are not recorded in the history table.
+- **Ordering**: **Prepend new events immediately below the table header** (strict reverse-chronological order, `YYYY-MM-DD`).
+- **Consistency**: The latest event for a target in the history table must match its current `Status` in the main pipeline table above.

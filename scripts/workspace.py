@@ -21,27 +21,44 @@ PLACEHOLDER_LETTER_ENTRY = "versions/letter/targeted/cover-letter-placeholder.te
 VERSION_FIELDS = {"resume": "resume_version", "letter": "cover_letter_version"}
 
 GROUP_0_LABELS = {
-    "待核实", "待预写", "写简历", "写求职信", "审核简历", "审核求职信", "待投递",
-    "Pending Verification", "Pending Pre-write", "Drafting Resume", "Drafting Letter",
-    "Reviewing Resume", "Reviewing Letter", "Ready to Apply",
+    "Pending Verification",
+    "Pending Pre-write",
+    "Drafting Resume",
+    "Drafting Letter",
+    "Reviewing Resume",
+    "Reviewing Letter",
+    "Ready to Apply",
 }
 GROUP_1_LABELS = {
-    "已投递", "一面", "二面", "终面", "补材料",
-    "Applied", "Interview", "Round 1", "Round 2", "Final Round", "Follow-up Docs",
+    "Applied",
+    "OA",
+    "Interview",
+    "Round 1",
+    "Round 2",
+    "Final Round",
+    "Follow-up Docs",
 }
 GROUP_2_LABELS = {
-    "已拿 offer", "已拒", "已下架",
-    "Offer", "Rejected", "Closed",
+    "Offer",
+    "Rejected",
+    "Closed",
 }
 
 STATUS = {
     "draft": GROUP_0_LABELS,
-    "open": GROUP_0_LABELS - {"待核实", "Pending Verification"},
-    "applied": {"已投递", "补材料", "Applied", "Follow-up Docs"},
-    "interviewing": {"一面", "二面", "终面", "补材料", "Interview", "Round 1", "Round 2", "Final Round", "Follow-up Docs"},
-    "offer": {"已拿 offer", "Offer"},
-    "rejected": {"已拒", "Rejected"},
-    "closed": {"已下架", "Closed"},
+    "open": GROUP_0_LABELS - {"Pending Verification"},
+    "applied": {"Applied", "Follow-up Docs"},
+    "interviewing": {
+        "OA",
+        "Interview",
+        "Round 1",
+        "Round 2",
+        "Final Round",
+        "Follow-up Docs",
+    },
+    "offer": {"Offer"},
+    "rejected": {"Rejected"},
+    "closed": {"Closed"},
 }
 
 
@@ -108,12 +125,12 @@ def packages(root: Path) -> list[tuple[Path, dict]]:
 
 def rows(root: Path) -> list[list[str]]:
     text = (root / "PROJECT_STATUS.md").read_text(encoding="utf-8")
-    if "## 岗位总表" not in text:
-        raise ValueError("PROJECT_STATUS.md missing '## 岗位总表' section")
-    table = text.split("## 岗位总表", 1)[1].split("\n## ", 1)[0]
+    if "## Application Pipeline" not in text:
+        raise ValueError("PROJECT_STATUS.md missing '## Application Pipeline' section")
+    table = text.split("## Application Pipeline", 1)[1].split("\n## ", 1)[0]
     result = []
     for line in table.splitlines():
-        if not line.startswith("|") or re.match(r"^\|\s*(编号|ID|[-:])", line):
+        if not line.startswith("|") or re.match(r"^\|\s*(ID|[-:])", line):
             continue
         cells = re.split(r"(?<!\\)\s+\|\s+", line.strip().strip("|").strip())
         if len(cells) != 9:
@@ -124,12 +141,12 @@ def rows(root: Path) -> list[list[str]]:
 
 def history_rows(root: Path) -> list[list[str]]:
     text = (root / "PROJECT_STATUS.md").read_text(encoding="utf-8")
-    if "## 历史动作" not in text:
+    if "## Activity History" not in text:
         return []
-    table = text.split("## 历史动作", 1)[1].split("\n## ", 1)[0]
+    table = text.split("## Activity History", 1)[1].split("\n## ", 1)[0]
     result = []
     for line in table.splitlines():
-        if not line.startswith("|") or re.match(r"^\|\s*(日期|Date|[-:])", line):
+        if not line.startswith("|") or re.match(r"^\|\s*(Date|[-:])", line):
             continue
         cells = re.split(r"(?<!\\)\s+\|\s+", line.strip().strip("|").strip())
         if len(cells) != 4:
@@ -171,7 +188,9 @@ def record(entry: str, aliases: list[str], engine: str = "pdflatex") -> dict:
 
 
 def registry(root: Path) -> tuple[list[dict], dict[str, dict]]:
-    manifest = json.loads((root / "scripts/build-targets.json").read_text(encoding="utf-8"))
+    manifest = json.loads(
+        (root / "scripts/build-targets.json").read_text(encoding="utf-8")
+    )
     if manifest.get("schema_version") != 1:
         raise ValueError("unsupported build manifest version")
     by_entry: dict[str, dict] = {}
@@ -194,7 +213,10 @@ def registry(root: Path) -> tuple[list[dict], dict[str, dict]]:
                 item = by_entry.setdefault(entry, record(entry, []))
                 if item["kind"] != kind:
                     raise ValueError(f"{folder.name}: wrong kind in {field}")
-                if item["kind"] == "resume" and Path(item["entry"]).parts[2] == "baseline":
+                if (
+                    item["kind"] == "resume"
+                    and Path(item["entry"]).parts[2] == "baseline"
+                ):
                     raise ValueError(
                         f"{folder.name}: target metadata must not claim the universal baseline; "
                         f"leave {field} empty until a targeted entry exists"
@@ -310,7 +332,9 @@ def validate(root: Path, require_pdfs: bool = False) -> dict:
         for field in ("company", "role", "status"):
             if not isinstance(m.get(field), str) or not m[field].strip():
                 error(f"{ident}: missing string {field}")
-        if not all(isinstance(m.get(field), str) for field in ("company", "role", "status")):
+        if not all(
+            isinstance(m.get(field), str) for field in ("company", "role", "status")
+        ):
             continue
         loc = m.get("location")
         if not isinstance(loc, (str, dict)) or (
@@ -321,7 +345,9 @@ def validate(root: Path, require_pdfs: bool = False) -> dict:
         if not isinstance(source, str) or not re.match(r"https?://[^\s]+$", source):
             error(f"{ident}: invalid source URL")
         if m.get("status") not in STATUS:
-            error(f"{ident}: unknown status; explicitly extend STATUS mapping before use")
+            error(
+                f"{ident}: unknown status; explicitly extend STATUS mapping before use"
+            )
         matches = [r for r in rs if r[0] == ident]
         if len(matches) != 1:
             error(f"{ident}: expected exactly one PROJECT_STATUS row, got {len(matches)}")
@@ -333,14 +359,20 @@ def validate(root: Path, require_pdfs: bool = False) -> dict:
             error(f"{ident}: metadata/status mismatch")
         if link(row[4]) != source:
             warnings.append(f"{ident}: source URL presentation differs; review manually")
-        for field, actual in [("company", row[1]), ("role", row[2]), ("location", row[3])]:
+        for field, actual in [
+            ("company", row[1]),
+            ("role", row[2]),
+            ("location", row[3]),
+        ]:
             expected = (
                 loc.get("display")
                 if field == "location" and isinstance(loc, dict)
                 else m.get(field)
             )
             if expected != actual:
-                warnings.append(f"{ident}: {field} display differs (human abbreviation allowed)")
+                warnings.append(
+                    f"{ident}: {field} display differs (human abbreviation allowed)"
+                )
         for kind, field in VERSION_FIELDS.items():
             value = m.get(field)
             pdf_link = link(row[7 if kind == "resume" else 8])
@@ -370,7 +402,9 @@ def validate(root: Path, require_pdfs: bool = False) -> dict:
                 if not (root / rec["pdf"]).is_file():
                     error(f"{ident}: missing PDF {rec['pdf']}")
             if not pdf_link:
-                warnings.append(f"{ident}: {kind} exists but status PDF not linked (draft is allowed)")
+                warnings.append(
+                    f"{ident}: {kind} exists but status PDF not linked (draft is allowed)"
+                )
 
     for r in rs:
         if r[0] not in ids:
@@ -473,7 +507,9 @@ def qa(pdf: Path, kind: str, log: Path | None = None) -> dict:
             if ratio < 0.60:
                 errors.append("letter body ends above 60% page-height line")
         else:
-            warnings.append("REVIEW: letter body boundaries not recognized; measure visually")
+            warnings.append(
+                "REVIEW: letter body boundaries not recognized; measure visually"
+            )
     elif lines:
         content = [l for l in lines if l["top"] / height < 0.94]
         ratio = max((l["bottom"] for l in content), default=0) / height
@@ -618,7 +654,10 @@ def init_target(root: Path, args: argparse.Namespace) -> None:
         raise ValueError("URL already registered")
     identifiers = [m["internal_id"] for _, m in ps]
     if (
-        any(not isinstance(i, str) or not re.fullmatch(r"[0-9]{3}", i) for i in identifiers)
+        any(
+            not isinstance(i, str) or not re.fullmatch(r"[0-9]{3}", i)
+            for i in identifiers
+        )
         or len(set(identifiers)) != len(identifiers)
     ):
         raise ValueError("fix invalid/duplicate IDs before initialization")
@@ -632,9 +671,9 @@ def init_target(root: Path, args: argparse.Namespace) -> None:
         raise ValueError("status table header changed; review insertion anchor")
     meta = {
         "internal_id": ident,
-        "company": args.company or "待核实",
-        "role": args.role or "待核实",
-        "location": args.location or "待核实",
+        "company": args.company or "Pending Verification",
+        "role": args.role or "Pending Verification",
+        "location": args.location or "Pending Verification",
         "source_url": args.url,
         "date_saved": dt.date.today().isoformat(),
         "status": "draft",
@@ -647,8 +686,8 @@ def init_target(root: Path, args: argparse.Namespace) -> None:
 
     row = (
         f'| {ident} | {cell(meta["company"])} | {cell(meta["role"])} | '
-        f'{cell(meta["location"])} | [链接]({args.url}) | '
-        f'[JD](targets/{args.slug}/jd.md) | 待核实 | — | — |'
+        f'{cell(meta["location"])} | [Link]({args.url}) | '
+        f'[JD](targets/{args.slug}/jd.md) | Pending Verification | — | — |'
     )
     if not args.write:
         print(json.dumps(meta, ensure_ascii=False, indent=2))
@@ -680,7 +719,9 @@ def init_target(root: Path, args: argparse.Namespace) -> None:
             f"No tailoring or application action performed yet. Follow `.agent/skills/job-prewrite/SKILL.md` before creating targeted LaTeX files.\n",
             encoding="utf-8",
         )
-        statusfile.write_text(old.replace(anchor, anchor + "\n" + row, 1), encoding="utf-8")
+        statusfile.write_text(
+            old.replace(anchor, anchor + "\n" + row, 1), encoding="utf-8"
+        )
     except Exception:
         statusfile.write_text(old, encoding="utf-8")
         shutil.rmtree(folder)
@@ -727,21 +768,32 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p = sub.add_parser("bootstrap", help="Initialize local untracked master files and private header from .example templates")
+    p = sub.add_parser(
+        "bootstrap",
+        help="Initialize local untracked master files and private header from .example templates",
+    )
     p.add_argument("--dry-run", action="store_true")
 
-    p = sub.add_parser("check", help="Validate metadata, PROJECT_STATUS.md, LaTeX dependencies, and PDF links")
+    p = sub.add_parser(
+        "check",
+        help="Validate metadata, PROJECT_STATUS.md, LaTeX dependencies, and PDF links",
+    )
     p.add_argument("--require-pdfs", action="store_true")
     p.add_argument("--json", action="store_true")
 
     sub.add_parser("list", help="List all registered build targets")
 
-    p = sub.add_parser("build", help="Compile a target in an isolated directory and run PDF/log QA")
+    p = sub.add_parser(
+        "build",
+        help="Compile a target in an isolated directory and run PDF/log QA",
+    )
     p.add_argument("target")
     p.add_argument("--public-header", action="store_true")
     p.add_argument("--publish", action="store_true")
 
-    p = sub.add_parser("affected", help="List or build targets affected by modified file paths")
+    p = sub.add_parser(
+        "affected", help="List or build targets affected by modified file paths"
+    )
     p.add_argument("paths", nargs="+")
     p.add_argument("--build", action="store_true")
     p.add_argument("--public-header", action="store_true")
@@ -751,7 +803,9 @@ def main() -> int:
     p.add_argument("--kind", choices=VERSION_FIELDS, required=True)
     p.add_argument("--log", type=Path)
 
-    p = sub.add_parser("init", help="Allocate internal_id and scaffold a new job target package")
+    p = sub.add_parser(
+        "init", help="Allocate internal_id and scaffold a new job target package"
+    )
     p.add_argument("--url", required=True)
     p.add_argument("--slug", required=True)
     p.add_argument("--company")

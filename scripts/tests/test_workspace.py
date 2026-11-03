@@ -6,6 +6,8 @@ import contextlib
 import io
 import json
 from pathlib import Path
+import re
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -16,11 +18,11 @@ import privacy_check
 import workspace as w
 
 HEADER = (
-    "| 编号 | 公司 | 岗位 | 地点 | 招聘页 | JD | 进展 | 简历 | 求职信 |\n"
+    "| ID | Company | Role | Location | Posting | JD | Status | Resume | Cover Letter |\n"
     "|------|------|------|--------|--------|-----|------|----------|------------|"
 )
 HISTORY_HEADER = (
-    "| 日期 | 公司 | 岗位（或编号） | 动作 |\n"
+    "| Date | Company | Role (or ID) | Event |\n"
     "|------|------|----------------|------|"
 )
 
@@ -36,9 +38,9 @@ class WorkspaceTests(unittest.TestCase):
             '{"schema_version":1,"targets":[]}', encoding="utf-8"
         )
         (self.root / "PROJECT_STATUS.md").write_text(
-            "# Test\n\n## 岗位总表（当前快照）\n\n"
+            "# Test\n\n## Application Pipeline (Current Snapshot)\n\n"
             + HEADER
-            + "\n\n## 历史动作（带日期）\n\n"
+            + "\n\n## Activity History (Dated Events)\n\n"
             + HISTORY_HEADER
             + "\n",
             encoding="utf-8",
@@ -80,7 +82,7 @@ class WorkspaceTests(unittest.TestCase):
         self.assertIn("resume-base", aliases)
         self.assertIn("letter-placeholder", aliases)
 
-    def test_agent_agnostic_context_architecture(self) -> None:
+    def test_agent_agnostic_context_architecture_and_english_only(self) -> None:
         self.assertTrue((w.ROOT / "AGENTS.md").is_file())
         self.assertTrue((w.ROOT / "CLAUDE.md").is_file())
         self.assertTrue((w.ROOT / ".agent/README.md").is_file())
@@ -108,13 +110,29 @@ class WorkspaceTests(unittest.TestCase):
         for rule in expected_rules:
             self.assertTrue((w.ROOT / ".agent/rules" / rule).is_file())
 
+        tracked = (
+            subprocess.check_output(["git", "ls-files"], cwd=w.ROOT)
+            .decode("utf-8")
+            .splitlines()
+        )
+        cjk_re = re.compile(r"[\u4e00-\u9fff]")
+        for rel in tracked:
+            p = w.ROOT / rel
+            if p.is_file():
+                text = p.read_text(encoding="utf-8", errors="ignore")
+                self.assertIsNone(
+                    cjk_re.search(text), f"Chinese characters found in tracked file: {rel}"
+                )
+
     def test_bootstrap_creates_untracked_files_without_overwriting(self) -> None:
         master = self.root / "content/master"
         master.mkdir(parents=True)
         (master / "profile.example.md").write_text("# Template Profile\n", encoding="utf-8")
         sec = self.root / "src/sections"
         sec.mkdir(parents=True)
-        (sec / "header.private.tex.example").write_text("% Header Example\n", encoding="utf-8")
+        (sec / "header.private.tex.example").write_text(
+            "% Header Example\n", encoding="utf-8"
+        )
 
         with contextlib.redirect_stdout(io.StringIO()):
             w.bootstrap_workspace(self.root)
@@ -145,14 +163,18 @@ class WorkspaceTests(unittest.TestCase):
 
     def test_duplicate_yaml_key_rejected(self) -> None:
         p = self.init() / "metadata.yaml"
-        p.write_text(p.read_text(encoding="utf-8") + 'internal_id: "009"\n', encoding="utf-8")
+        p.write_text(
+            p.read_text(encoding="utf-8") + 'internal_id: "009"\n', encoding="utf-8"
+        )
         with self.assertRaisesRegex(ValueError, "duplicate YAML"):
             w.packages(self.root)
 
     def test_invalid_id_and_missing_quartet(self) -> None:
         p = self.init()
         m = p / "metadata.yaml"
-        m.write_text(m.read_text(encoding="utf-8").replace('"001"', "1"), encoding="utf-8")
+        m.write_text(
+            m.read_text(encoding="utf-8").replace('"001"', "1"), encoding="utf-8"
+        )
         (p / "notes.md").unlink()
         errors = w.validate(self.root)["errors"]
         self.assertTrue(any("three-digit" in e for e in errors))
@@ -172,7 +194,7 @@ class WorkspaceTests(unittest.TestCase):
         f = self.root / "PROJECT_STATUS.md"
         f.write_text(
             f.read_text(encoding="utf-8").replace(
-                "| — | — |", "| [简历](output/cv/targeted/wrong.pdf) | — |"
+                "| — | — |", "| [Resume](output/cv/targeted/wrong.pdf) | — |"
             ),
             encoding="utf-8",
         )
@@ -197,22 +219,33 @@ class WorkspaceTests(unittest.TestCase):
         self.init()
         f = self.root / "PROJECT_STATUS.md"
         f.write_text(
-            f.read_text(encoding="utf-8").replace("| 待核实 |", "| 已投递 |"),
+            f.read_text(encoding="utf-8").replace(
+                "| Pending Verification |", "| Applied |"
+            ),
             encoding="utf-8",
         )
-        self.assertTrue(any("status mismatch" in e for e in w.validate(self.root)["errors"]))
+        self.assertTrue(
+            any("status mismatch" in e for e in w.validate(self.root)["errors"])
+        )
         row = next(
-            l for l in f.read_text(encoding="utf-8").splitlines() if l.startswith("| 001")
+            l
+            for l in f.read_text(encoding="utf-8").splitlines()
+            if l.startswith("| 001")
         )
         f.write_text(
-            f.read_text(encoding="utf-8").replace(row, row + "\n" + row), encoding="utf-8"
+            f.read_text(encoding="utf-8").replace(row, row + "\n" + row),
+            encoding="utf-8",
         )
-        self.assertTrue(any("exactly one" in e for e in w.validate(self.root)["errors"]))
+        self.assertTrue(
+            any("exactly one" in e for e in w.validate(self.root)["errors"])
+        )
 
     def test_private_input_is_opaque(self) -> None:
         p = self.init()
         entry = self.version(p)
-        (self.root / entry).write_text("\\input{sections/header.private}\n", encoding="utf-8")
+        (self.root / entry).write_text(
+            "\\input{sections/header.private}\n", encoding="utf-8"
+        )
         self.assertIn(w.PRIVATE, w.dependencies(self.root, entry))
 
     def test_single_universal_baseline_enforced(self) -> None:
@@ -280,13 +313,23 @@ class WorkspaceTests(unittest.TestCase):
 
     def test_privacy_path_blocks(self) -> None:
         self.assertIsNone(privacy_check.is_blocked_path("content/master/README.md"))
-        self.assertIsNone(privacy_check.is_blocked_path("content/master/skills.example.md"))
+        self.assertIsNone(
+            privacy_check.is_blocked_path("content/master/skills.example.md")
+        )
         self.assertIsNotNone(privacy_check.is_blocked_path("content/master/skills.md"))
         self.assertIsNotNone(privacy_check.is_blocked_path("cn-campus-2027/README.md"))
-        self.assertIsNotNone(privacy_check.is_blocked_path("src/sections/header.private.tex"))
-        self.assertIsNone(privacy_check.is_blocked_path("src/sections/header.private.tex.example"))
-        self.assertIsNotNone(privacy_check.is_blocked_path("targets/real-company/jd.md"))
-        self.assertIsNone(privacy_check.is_blocked_path("targets/example-company-role/jd.md"))
+        self.assertIsNotNone(
+            privacy_check.is_blocked_path("src/sections/header.private.tex")
+        )
+        self.assertIsNone(
+            privacy_check.is_blocked_path("src/sections/header.private.tex.example")
+        )
+        self.assertIsNotNone(
+            privacy_check.is_blocked_path("targets/real-company/jd.md")
+        )
+        self.assertIsNone(
+            privacy_check.is_blocked_path("targets/example-company-role/jd.md")
+        )
 
 
 if __name__ == "__main__":

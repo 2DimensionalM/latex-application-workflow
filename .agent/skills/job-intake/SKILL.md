@@ -1,9 +1,9 @@
 ---
 name: job-intake
-description: Register one or more job posting URLs or raw job descriptions into the workspace (岗位链接/JD进项目). Use when the user provides job links or JDs and asks to add/intake/register them into the project ("进项目", "登记岗位", "加岗位").
+description: Register one or more job posting URLs or raw job descriptions into the workspace. Use when the user provides job links or JDs and asks to add, intake, or register them into the project.
 ---
 
-# Step 1: Job URL & JD Intake (岗位链接与 JD 进项目)
+# Stage 1: Job URL & JD Intake
 
 ## When to Use
 
@@ -36,7 +36,7 @@ Task Progress:
   - **Workday (`*.myworkdayjobs.com`)**: Use `curl -sL '<URL>'` and extract `<meta property="og:title">`, `<meta property="og:description">`, or embedded JSON-LD (`application/ld+json`).
   - **Phenom / Corporate Careers**: Check `application/ld+json` (`@type: JobPosting`) or `phApp.ddo.jobDetail`.
   - **Age-gated sites**: Use `curl -sL` to read embedded metadata/JSON-LD directly.
-- **Cross-check before marking `closed`**: Never mark a job `closed` (`已下架`) from an isolated banner alone; verify whether `JobPosting` JSON-LD / `jobDetail` still contains an active `applyUrl` and full description.
+- **Cross-check before marking `closed`**: Never mark a job `closed` (`Closed`) from an isolated banner alone; verify whether `JobPosting` JSON-LD / `jobDetail` still contains an active `applyUrl` and full description.
 
 ### 2. Initialize Target Package & Allocate `internal_id`
 Choose a clean lowercase hyphenated slug `<company>-<role-keywords>-<city>` and run:
@@ -51,7 +51,7 @@ python3 scripts/workspace.py init --url '<URL>' --slug <company-role-city> --com
 
 ### 3. Write `targets/<slug>/jd.md` (English Standard)
 - Always write `jd.md` body in **English** so downstream tailoring and English resume/letter drafting align directly.
-- If the source posting is in another language (e.g., Dutch, German, French), translate faithfully into English without adding or dropping requirements, and record `Original posting language: <Language>` in the header.
+- If the source posting is in another language (e.g., Dutch, German, French), translate faithfully into English without adding or dropping requirements, and record `Original Posting Language: <Language>` in the header.
 - Strip cookie banners, age gates, and footer marketing boilerplate.
 
 ```markdown
@@ -83,7 +83,7 @@ python3 scripts/workspace.py init --url '<URL>' --slug <company-role-city> --com
 ### 4. Write `targets/<slug>/notes.md` & Update `metadata.yaml`
 - In `notes.md`, record: capture date, employer Job ID, logistics to verify (start window, thesis/non-thesis, language), and initial fit signals against `content/master/`.
 - In `metadata.yaml`, set `status: "open"` (or `"closed"` if verified closed), keep `resume_version: ""` and `cover_letter_version: ""`.
-- In `PROJECT_STATUS.md`, update the new row's status from `待核实` to `待预写` (if open) or `已下架` (if closed, moving the row to the bottom terminal group).
+- In `PROJECT_STATUS.md`, update the new row's `Status` from `Pending Verification` to `Pending Pre-write` (if open) or `Closed` (if closed, moving the row to the bottom terminal group).
 
 ### 5. Validate
 ```bash

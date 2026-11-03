@@ -1,45 +1,47 @@
-# 求职进展（按岗位）
+# Application Status & Activity Tracker (`PROJECT_STATUS.md`)
 
-本文件维护两张表：**（1）岗位总表（当前快照）** = 一行对应 `targets/<slug>/` 下一个真实岗位包；**（2）历史动作（带日期）** = 真实求职事件时间线（投递、面试、补材料、结果等），按日期倒序排列（最新在最上）。
+This file maintains two human-editable tables:
+1. **Application Pipeline (Current Snapshot)**: One row per real target package under `targets/<slug>/`.
+2. **Activity History (Dated Events)**: Reverse-chronological log of verified application events (applied, OA, interviews, follow-up documents, offer, rejection, or job closed), with the newest event placed at the top.
 
-与仓库 `targets/<slug>/metadata.yaml` 的联动约束、行分组排序规则、编号规则及更新流程，详见 **`.agent/rules/status.md`** 与 Skill **`.agent/skills/status-and-publish/SKILL.md`**。
+For synchronization rules with `targets/<slug>/metadata.yaml`, the 3-tier status grouping order, ID allocation invariants, and update procedures, see **[`.agent/rules/status.md`](.agent/rules/status.md)** and **[`.agent/skills/status-and-publish/SKILL.md`](.agent/skills/status-and-publish/SKILL.md)**.
 
 ---
 
-## 「进展」列标准用语（与 `metadata.yaml` 的 `status` 映射）
+## Standard `Status` Labels (Mapped to `metadata.yaml` `status`)
 
-| 准备（`draft` / `open`） | 写材料（`draft` / `open`） | 审核与待投（`draft` / `open`） | 投递与流程（`applied` / `interviewing`） | 结果与终态（`offer` / `rejected` / `closed`） |
+| Preparation (`draft` / `open`) | Material Drafting (`draft` / `open`) | Review & Ready (`draft` / `open`) | Active Pipeline (`applied` / `interviewing`) | Terminal Outcomes (`offer` / `rejected` / `closed`) |
 |---|---|---|---|---|
-| 待核实 / Pending Verification | 写简历 / Drafting Resume | 审核简历 / Reviewing Resume | 已投递 / Applied | 已拿 offer / Offer |
-| 待预写 / Pending Pre-write | 写求职信 / Drafting Letter | 审核求职信 / Reviewing Letter | 一面 / 二面 / 终面 / Interview | 已拒 / Rejected |
-| | | 待投递 / Ready to Apply | 补材料 / Follow-up Docs | 已下架 / Closed |
+| `Pending Verification` | `Drafting Resume` | `Reviewing Resume` | `Applied` | `Offer` |
+| `Pending Pre-write` | `Drafting Letter` | `Reviewing Letter` | `OA` / `Interview` / `Round 1` / `Round 2` / `Final Round` | `Rejected` |
+| | | `Ready to Apply` | `Follow-up Docs` | `Closed` |
 
 ---
 
-## 岗位总表（当前快照）
+## Application Pipeline (Current Snapshot)
 
-| 编号 | 公司 | 岗位 | 地点 | 招聘页 | JD | 进展 | 简历 | 求职信 |
+| ID | Company | Role | Location | Posting | JD | Status | Resume | Cover Letter |
 |------|------|------|--------|--------|-----|------|----------|------------|
 
 ---
 
-## 历史动作（带日期）
+## Activity History (Dated Events)
 
-| 日期 | 公司 | 岗位（或编号） | 动作 |
+| Date | Company | Role (or ID) | Event |
 |------|------|----------------|------|
 
 ---
 
-## 新行模板（复制或通过 `workspace.py init` 自动插入）
+## Row Templates (Inserted via `workspace.py init` or Manual Edit)
 
-**岗位总表（9 列）：**
+**Application Pipeline (9 Columns):**
 
 ```markdown
-| 001 | Example Corp | Data & AI Engineer Intern（REQ-1001） | Amsterdam, Netherlands | [链接](https://example.com/jobs/1001) | [JD](targets/example-corp-data-ai-intern-amsterdam/jd.md) | 待预写 | — | — |
+| 001 | Example Corp | Data & AI Engineer Intern (REQ-1001) | Amsterdam, Netherlands | [Link](https://example.com/jobs/1001) | [JD](targets/example-corp-data-ai-intern-amsterdam/jd.md) | Pending Pre-write | — | — |
 ```
 
-**历史动作（4 列，插在「历史动作」表头下一行）：**
+**Activity History (4 Columns — insert immediately below the Activity History header):**
 
 ```markdown
-| 2026-11-03 | Example Corp | 001（REQ-1001，Data & AI Engineer Intern） | 已投递 |
+| 2026-11-03 | Example Corp | 001 (REQ-1001, Data & AI Engineer Intern) | Applied |
 ```

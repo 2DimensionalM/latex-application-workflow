@@ -1,9 +1,9 @@
 ---
 name: targeted-cover-letter
-description: Draft, compile, and visually QA a targeted 5-paragraph LaTeX cover letter that meets the mandatory >=60% page-height threshold (制作定向求职信/Cover Letter与60%篇幅高度QA). Use when the user asks to write, revise, or build a cover letter ("写求职信", "写 cover letter", "编译求职信") for a job target.
+description: Draft, compile, and visually QA a targeted 5-paragraph LaTeX cover letter that meets the mandatory >=60% page-height threshold. Use when the user asks to write, revise, or build a cover letter for a job target.
 ---
 
-# Step 4: Targeted Cover Letter Drafting & 60% Height QA (定向求职信制作与 60% 篇幅 QA)
+# Stage 4: Targeted Cover Letter Drafting & >=60% Height QA
 
 ## When to Use
 
@@ -88,7 +88,7 @@ Task Progress:
   4. **Forward-Looking Execution Plan (Mandatory)**: Detail how the candidate plans to ramp up in the first weeks, what concrete problem or pipeline they want to investigate/solve first, and how they will bridge any honest gaps.
   5. **Logistics & Closing**: State availability (start date, duration, days per week, location/language) and close with a concrete, non-template question or discussion topic for the interview.
 
-### 3. Isolated Build & Mandatory $\ge 60\%$ Page-Height QA Loop
+### 3. Isolated Build & Mandatory >= 60% Page-Height QA Loop
 Run the isolated build and render the page image:
 ```bash
 ./scripts/build.sh letter:<id>
@@ -96,7 +96,7 @@ pdftoppm -png -r 100 output/review/{id}-cover-letter-<short-slug>/{id}-cover-let
 ```
 1. Check `qa.json` output:
    - `pages` must be `1`;
-   - `body_end_fraction` (measured from top of page to the last line of body text before `Sincerely,`) **must be $\ge 0.60$**.
+   - `body_end_fraction` (measured from top of page to the last line of body text before `Sincerely,`) **must be >= 0.60**.
 2. Inspect `/tmp/letter-review-<id>-1.png` using the Read tool.
 3. **If `body_end_fraction < 0.60`**:
    - Expand substantive content in Paragraph 4 (forward-looking plan) or deepen the role/company analysis in Paragraphs 2–3;

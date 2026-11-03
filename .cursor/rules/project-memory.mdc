@@ -2,10 +2,10 @@
 description: Thin Cursor router pointing to AGENTS.md and .agent/ Context Architecture
 alwaysApply: true
 ---
-# Cursor Router → `AGENTS.md` & `.agent/`
+# Cursor Router -> `AGENTS.md` & `.agent/`
 
-本仓库不将长期记忆或业务规则绑定在 `.mdc` 中。执行任何任务前：
+This repository does not store long-term memory or domain rules in proprietary `.mdc` files. Before executing any task:
 
-1. 读取根目录 **[`AGENTS.md`](../../AGENTS.md)** 获取核心安全红线、Git 提交策略与按需路由表。
-2. 根据任务阶段加载 **[`.agent/skills/<skill-name>/SKILL.md`](../../.agent/skills/)** 中的标准化工作流技能，以及 **[`.agent/rules/<topic>.md`](../../.agent/rules/)** 中的领域细则。
-3. 严禁读取、打印或提交 `src/sections/header.private.tex`；新增长期记忆或规则时一律写入 `.agent/rules/` 或 `AGENTS.md`，不要写回本 `.mdc` 文件。
+1. Read **[`AGENTS.md`](../../AGENTS.md)** at the repository root for safety boundaries, Git policy, and the on-demand task routing table.
+2. Load the matching stage skill from **[`.agent/skills/<skill-name>/SKILL.md`](../../.agent/skills/)** and the relevant domain rule from **[`.agent/rules/<topic>.md`](../../.agent/rules/)**.
+3. Never read, print, or commit `src/sections/header.private.tex`. Add any new long-term memory or workflow rules to `.agent/rules/` or `AGENTS.md`, never to this `.mdc` router.

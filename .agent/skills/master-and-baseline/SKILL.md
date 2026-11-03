@@ -3,7 +3,7 @@ name: master-and-baseline
 description: Initialize and maintain the candidate Master Fact Layer (content/master/) and the single Universal CV Baseline (src/sections/baseline-universal.tex). Use when onboarding after forking the repo, adding or updating candidate experiences/education/projects/skills/certifications in master data, or when the user explicitly asks to refresh the universal baseline resume.
 ---
 
-# Master Data & Universal Baseline Maintenance (母版事实库与通用基线维护)
+# Stage 0: Master Data & Universal Baseline Maintenance
 
 ## When to Use
 
@@ -22,7 +22,7 @@ Task Progress:
 - [ ] Step 1: Identify mode (Bootstrap / Master Fact Update / Explicit Baseline Refresh)
 - [ ] Step 2: Update or initialize `content/master/*.md` (facts only, no editorial omit rules)
 - [ ] Step 3: (Only if requested) Curate `src/sections/baseline-universal.tex` & update `RESUME_BASELINE.md`
-- [ ] Step 4: (Only if baseline changed) Run isolated build, 1-page + ≥80% height QA, and visual check
+- [ ] Step 4: (Only if baseline changed) Run isolated build, 1-page + >=80% height QA, and visual check
 - [ ] Step 5: Run `python3 scripts/workspace.py check` and `python3 scripts/privacy_check.py`
 ```
 
@@ -59,13 +59,13 @@ When the user provides new experiences, project details, grades, or screenshots:
 
 ## Mode C: Refreshing the Universal CV Baseline (Explicit Request Only)
 
-Only execute when the user explicitly says "刷新 baseline" / "refresh universal baseline":
+Only execute when the user explicitly requests refreshing the universal baseline:
 
 1. Cross-check `src/sections/baseline-universal.tex` against all files in `content/master/`.
 2. Enforce formatting and content constraints from `.agent/rules/content.md`:
    - Strict reverse-chronological order in `Experience` (`\cvexpblock`).
    - Macro-only structural bolding (`\cvexpblock`, `\cveduhead`, `\cvskillblock`); no arbitrary `\textbf{...}` inside bullets or `\cvedunote{...}`.
-   - Single-page target with balanced bottom density (last content line ≥ 80% page height).
+   - Single-page target with balanced bottom density (last content line >= 80% page height).
 3. Run isolated build and visual QA:
    ```bash
    ./scripts/build.sh baseline
