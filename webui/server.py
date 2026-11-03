@@ -89,7 +89,8 @@ def set_progress(slug: str, label: str) -> None:
     marker = "|------|------|----------------|------|"
     esc = lambda v: str(v).replace("|", r"\|").replace("\n", " ")
     history = f"| {dt.date.today().isoformat()} | {esc(meta['company'])} | {ident}（{esc(meta['role'])}） | {label} |"
-    if new_text.count(marker) == 1:
+    # History records real application events only; preparation stages are not logged.
+    if new_text.count(marker) == 1 and group(label) > 0:
         new_text = new_text.replace(marker, marker + "\n" + history, 1)
     status_path.write_text(new_text, encoding="utf-8")
     meta_path.write_text(re.sub(r'^status:.*$', f'status: {json.dumps(new_status)}', meta_path.read_text(encoding="utf-8"), flags=re.M), encoding="utf-8")
