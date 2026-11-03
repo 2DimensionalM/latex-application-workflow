@@ -87,7 +87,8 @@ def set_progress(slug: str, label: str) -> None:
     lines[first:last + 1] = rows_sorted
     new_text = head + "## 岗位总表" + "\n".join(lines) + (("\n## " + tail) if tail else "")
     marker = "|------|------|----------------|------|"
-    history = f"| {dt.date.today().isoformat()} | {meta['company']} | {ident}（{meta['role']}） | {label} |".replace("\n", " ")
+    esc = lambda v: str(v).replace("|", r"\|").replace("\n", " ")
+    history = f"| {dt.date.today().isoformat()} | {esc(meta['company'])} | {ident}（{esc(meta['role'])}） | {label} |"
     if new_text.count(marker) == 1:
         new_text = new_text.replace(marker, marker + "\n" + history, 1)
     status_path.write_text(new_text, encoding="utf-8")
