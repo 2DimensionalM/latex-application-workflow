@@ -1,29 +1,55 @@
-# Private candidate data
-content/master/
+# Private candidate data (keep README and *.example.md tracked for onboarding)
+content/master/*
+!content/master/README.md
+!content/master/*.example.md
+content/tailored/
 src/sections/header.private.tex
 
-# Real job packages: keep only the committed example package
+# Regional / personal sub-workspaces (never upload)
+cn-campus-2027/
+_inbox/
+nuffic/
+
+# Real job packages: keep only the committed example package and README
 targets/*/
 !targets/example-company-role/
 !targets/example-company-role/**
 
-# Generated artifacts
+# Real targeted LaTeX entries and sections (keep placeholders tracked)
+versions/cv/targeted/*.tex
+versions/letter/targeted/*.tex
+!versions/letter/targeted/cover-letter-placeholder.tex
+src/sections/targeted-*.tex
+src/sections/letters/targeted-*.tex
+
+# Generated artifacts and LaTeX intermediates
 output/**
 !output/.gitkeep
 *.pdf
 *.aux
-*.log
-*.out
-*.fls
+*.bbl
+*.blg
 *.fdb_latexmk
+*.fls
+*.lof
+*.log
+*.lot
+*.nav
+*.out
+*.snm
 *.synctex.gz
+*.toc
+*.vrb
+*.xdv
 
 # Local environments and editor files
 .venv/
 venv/
 __pycache__/
 *.py[cod]
+.Python
 .DS_Store
+.AppleDouble
+.LSOverride
 *.swp
 *~
-

@@ -1,10 +1,12 @@
-# Schema example only. Do not put real application data in this committed folder.
+# Schema template only. Do not put real application data in this committed folder.
+# To create a real target package with an auto-allocated internal_id (001..999):
+#   python3 scripts/workspace.py init --url 'https://...' --slug company-role-city --write
 internal_id: "000"
 company: "Example Company"
 role: "Example Role"
-location: "Example City"
+location: "Example City, Country"
 source_url: "https://example.invalid/jobs/example-role"
+date_saved: "2026-01-01"
 status: "draft"
 resume_version: ""
 cover_letter_version: ""
-

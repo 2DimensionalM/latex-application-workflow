@@ -1,5 +1,13 @@
-\usepackage[margin=1.7cm]{geometry}
+% Minimal resume preamble: packages and page layout (core TeX Live / TinyTeX only).
+\usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{titlesec}
 \usepackage[hidelinks]{hyperref}
+% Tighter vertical rhythm around unnumbered section titles (\section*{Profile}, etc.)
+\titleformat{\section}{\normalfont\Large\bfseries}{}{0em}{}
+\titlespacing*{\section}{0pt}{1.5ex plus 0.2ex minus 0.1ex}{0.65ex plus 0.15ex minus 0.05ex}
 \pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.4em}

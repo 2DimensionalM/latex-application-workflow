@@ -1,0 +1,20 @@
+% ---------------------------------------------------------------------------
+% Private header template — EXAMPLE ONLY (tracked).
+%
+% Setup:
+%   1. Run `python3 scripts/workspace.py bootstrap` (or copy this file to `src/sections/header.private.tex`).
+%   2. Replace the bracketed placeholders in `src/sections/header.private.tex` with your real contact details.
+%   3. `src/sections/header.tex` automatically loads `header.private.tex` when it exists.
+%
+% Privacy: `src/sections/header.private.tex` is gitignored and blocked by `scripts/privacy_check.py`.
+% ---------------------------------------------------------------------------
+\begin{center}
+  {\Large \textbf{[Full Name]}}\\[0.45em]
+  {\normalsize
+  [Postal Code] [City], [Country] \quad\textbar\quad
+  [Email Placeholder] \quad\textbar\quad
+  [Phone Placeholder] \quad\textbar\quad
+  \href{https://www.linkedin.com}{LinkedIn} \quad\textbar\quad
+  \href{https://github.com}{GitHub}}
+\end{center}
+\vspace{0.35em}

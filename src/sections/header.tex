@@ -1,7 +1,8 @@
-% Keep real contact details in the ignored header.private.tex file.
+% Header entry point — resume and cover letter files always \input{sections/header}.
+% Automatically uses your local untracked header.private.tex when present,
+% or falls back to the tracked placeholder header.template.tex.
 \IfFileExists{sections/header.private.tex}{%
   \input{sections/header.private}%
 }{%
   \input{sections/header.template}%
 }
-

@@ -1,0 +1,40 @@
+% Shared resume layout macros.
+% Keep long-form copy in content/master/ and src/sections/*.tex.
+
+% --- Experience: left = title (top) + company (below); right = dates (top) + location (below, italic) ---
+% Args: #1 company, #2 job title, #3 location, #4 dates
+\newcommand{\cvexpblock}[4]{%
+  \par\addvspace{0.38em}%
+  \noindent
+  \begin{minipage}[t]{0.62\linewidth}\raggedright
+    \textbf{#2}\\[0.08em]
+    #1%
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.34\linewidth}\raggedleft
+    #4\\[0.08em]
+    \textit{#3}%
+  \end{minipage}\par
+  \vspace{0.14em}%
+}
+
+% --- Education: line1 = School (left) + dates (right); line2 = degree (left) + location (right); then \cvedunote ---
+\newcommand{\cveduhead}[2]{%
+  \par\addvspace{0.38em}%
+  \noindent\textbf{#1}\hfill #2\par
+  \vspace{0.12em}%
+}
+\newcommand{\cvedusub}[2]{%
+  \noindent #1\hfill \textit{#2}\par
+}
+\newcommand{\cvedunote}[1]{%
+  \vspace{0.22em}%
+  \noindent\begin{minipage}[t]{0.98\linewidth}\raggedright\small #1\end{minipage}\par
+}
+
+% --- Skills: titled blocks (no pipe separators); body is free-form line(s) ---
+\newcommand{\cvskillblock}[2]{%
+  \par\addvspace{0.18em}%
+  \noindent\textbf{#1}\par
+  \vspace{0.06em}%
+  \noindent #2\par
+}
