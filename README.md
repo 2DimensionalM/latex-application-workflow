@@ -1,5 +1,7 @@
 # LaTeX Application Workflow
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A **privacy-first, agent-agnostic (`.agent/` + `AGENTS.md` + `CLAUDE.md`), harness-driven** LaTeX workflow for engineering targeted English resumes (CVs) and cover letters.
 
 This repository decouples **candidate master facts (`content/master/`)**, **a single cross-market Universal CV Baseline (`baseline-universal.tex`)**, **role-specific pre-writing plans (`targets/<slug>/tailoring.md`)**, and **isolated LaTeX compilation with automated PDF layout QA (`scripts/workspace.py`)**. Every phase—from job URL intake to snapshot publishing and status tracking—is codified into standardized, portable Agent Skills under `.agent/skills/` and domain rules under `.agent/rules/`, ready to fork and extend across Claude Code, Codex, Cursor, OpenCode, or any other coding agent.
@@ -122,3 +124,9 @@ All long-term memory, domain rules, and workflow skills are written in standard 
    .venv/bin/python -m unittest discover -s scripts/tests -v
    ```
    `privacy_check.py` inspects all tracked and staged files and fails immediately if any private path, binary/PDF artifact, email address, phone number, GitHub token, or private key is detected.
+
+---
+
+## 5. License
+
+Released under the [MIT License](LICENSE).

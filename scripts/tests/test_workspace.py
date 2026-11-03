@@ -83,6 +83,7 @@ class WorkspaceTests(unittest.TestCase):
         self.assertIn("letter-placeholder", aliases)
 
     def test_agent_agnostic_context_architecture_and_english_only(self) -> None:
+        self.assertTrue((w.ROOT / "LICENSE").is_file())
         self.assertTrue((w.ROOT / "AGENTS.md").is_file())
         self.assertTrue((w.ROOT / "CLAUDE.md").is_file())
         self.assertTrue((w.ROOT / ".agent/README.md").is_file())

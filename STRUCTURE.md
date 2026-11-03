@@ -63,6 +63,7 @@ This document defines the repository's Context Architecture and directory bounda
 | `scripts/build.sh`, `scripts/build_all.py` | Single-target build wrapper and batch isolated build orchestrator |
 | `scripts/privacy_check.py` | Pre-commit privacy gate blocking private paths, binary PDFs, emails, phone numbers, and secrets |
 | `scripts/tests/test_workspace.py` | Offline unit test suite using disposable temporary fixtures |
+| `LICENSE` | MIT open-source license |
 
 ## 3. Naming & ID Invariants
 
