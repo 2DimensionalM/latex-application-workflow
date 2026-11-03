@@ -1,13 +1,13 @@
 # 岗位预写与定制流程规范 (Role Pre-writing & Tailoring Rules)
 
-> 适用场景：为已登记岗位做投递前规划（预写 `tailoring.md`），或准备撰写定向简历与求职信。对应标准化 Skill：`.cursor/skills/job-prewrite/SKILL.md`。
+> 适用场景：为已登记岗位做投递前规划（预写 `tailoring.md`），或准备撰写定向简历与求职信。对应标准化 Skill：`.agent/skills/job-prewrite/SKILL.md`。
 
 ---
 
 ## 一、岗位定制标准六步顺序（严禁跳步）
 
 1. **母版事实优先（`content/master/`）**：确认候选人事实与可复用 bullet 已在 `content/master/` 核实完备。
-2. **目标包就绪（`targets/<slug>/`）**：确认 `jd.md`、`notes.md`、`metadata.yaml` 已按 `docs/rules/intake.md` 登记完毕。
+2. **目标包就绪（`targets/<slug>/`）**：确认 `jd.md`、`notes.md`、`metadata.yaml` 已按 `.agent/rules/intake.md` 登记完毕。
 3. **岗位预写（`targets/<slug>/tailoring.md`，默认必做、不可跳过）**：在动刀写任何定向 LaTeX 之前，先在 `tailoring.md` 完成该岗专属的证据映射、板块取舍与求职信五段规划。
 4. **定向简历（`targeted-resume`）**：以唯一通用父本 `src/sections/baseline-universal.tex` 为起点，创建 `src/sections/targeted-<short-slug>.tex` 与 `versions/cv/targeted/{id}-resume-<company>-<role>-<location>.tex`，完成隔离构建与单页/留白视觉 QA。
 5. **定向求职信（`targeted-cover-letter`）**：基于 `tailoring.md`、`content/master/` 与该岗定向简历，创建 `src/sections/letters/targeted-<short-slug>-letter.tex` 与 `versions/letter/targeted/{id}-cover-letter-<short-slug>.tex`，完成五段式结构与 ≥60% 页面高度视觉 QA。
@@ -15,11 +15,11 @@
 
 ---
 
-## 二、`tailoring.md`、`content/master/` 与 `docs/rules/` 的职责分工
+## 二、`tailoring.md`、`content/master/` 与 `.agent/rules/` 的职责分工
 
 | 文件位置 | 唯一职责 | 禁止事项 |
 |---|---|---|
-| `docs/rules/*.md` | 跨岗位通用的流程、红线、排版规则、压缩优先级、五段求职信标准 | 不记录单岗临时取舍 |
+| `.agent/rules/*.md` | 跨岗位通用的流程、红线、排版规则、压缩优先级、五段求职信标准 | 不记录单岗临时取舍 |
 | `content/master/*.md` | 候选人纯事实库存（经历分期、成绩、技能证据、项目细节、`Need verification`） | 不写“投递时省略 X”等裁剪规则 |
 | `targets/<slug>/tailoring.md` | **仅限本岗**：JD 核心要求拆解 → 母版证据映射、Profile/Skills/Bullets 取舍、求职信五段提纲、面试风险点 | 不要大段复制仓库级通用规则；不要把一次性 JD 关键词写回 `baseline` 或 `master` |
 

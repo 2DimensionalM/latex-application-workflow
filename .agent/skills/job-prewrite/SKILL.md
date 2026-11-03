@@ -10,7 +10,7 @@ description: Complete role-specific pre-writing and evidence mapping in targets/
 Trigger this skill when the user asks to pre-write a registered job target (`001`, `<slug>`, etc.) or before drafting a targeted LaTeX resume/cover letter if `targets/<slug>/tailoring.md` is still a placeholder.
 - **Core rule**: Never skip pre-writing to directly edit LaTeX. `tailoring.md` is the decision layer connecting `jd.md` + `notes.md` to `content/master/` + `src/sections/baseline-universal.tex`.
 
-Read `docs/rules/tailoring.md`, `docs/rules/content.md`, `targets/<slug>/jd.md`, `targets/<slug>/notes.md`, `src/sections/baseline-universal.tex`, and relevant `content/master/*.md` files.
+Read `.agent/rules/tailoring.md`, `.agent/rules/content.md`, `targets/<slug>/jd.md`, `targets/<slug>/notes.md`, `src/sections/baseline-universal.tex`, and relevant `content/master/*.md` files.
 
 ---
 

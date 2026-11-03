@@ -45,8 +45,8 @@ python3 scripts/workspace.py init --url 'https://example.com/jobs/12345' --slug 
 
 ## 三、关联标准化 Skills 与规则
 
-- **Step 1（岗位链接 / JD 进项目）**：`.cursor/skills/job-intake/SKILL.md`、`docs/rules/intake.md`
-- **Step 2（岗位预写 `tailoring.md`）**：`.cursor/skills/job-prewrite/SKILL.md`、`docs/rules/tailoring.md`
-- **Step 3（定向简历制作与 QA）**：`.cursor/skills/targeted-resume/SKILL.md`、`docs/rules/content.md`
-- **Step 4（定向求职信制作与 QA）**：`.cursor/skills/targeted-cover-letter/SKILL.md`、`docs/rules/content.md`
-- **Step 5（发布快照与更新进展）**：`.cursor/skills/status-and-publish/SKILL.md`、`docs/rules/status.md`
+- **Step 1（岗位链接 / JD 进项目）**：`.agent/skills/job-intake/SKILL.md`、`.agent/rules/intake.md`
+- **Step 2（岗位预写 `tailoring.md`）**：`.agent/skills/job-prewrite/SKILL.md`、`.agent/rules/tailoring.md`
+- **Step 3（定向简历制作与 QA）**：`.agent/skills/targeted-resume/SKILL.md`、`.agent/rules/content.md`
+- **Step 4（定向求职信制作与 QA）**：`.agent/skills/targeted-cover-letter/SKILL.md`、`.agent/rules/content.md`
+- **Step 5（发布快照与更新进展）**：`.agent/skills/status-and-publish/SKILL.md`、`.agent/rules/status.md`

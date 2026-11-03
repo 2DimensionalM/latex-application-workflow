@@ -80,6 +80,34 @@ class WorkspaceTests(unittest.TestCase):
         self.assertIn("resume-base", aliases)
         self.assertIn("letter-placeholder", aliases)
 
+    def test_agent_agnostic_context_architecture(self) -> None:
+        self.assertTrue((w.ROOT / "AGENTS.md").is_file())
+        self.assertTrue((w.ROOT / "CLAUDE.md").is_file())
+        self.assertTrue((w.ROOT / ".agent/README.md").is_file())
+        self.assertTrue((w.ROOT / ".cursor/rules/project-memory.mdc").is_file())
+        self.assertFalse((w.ROOT / ".cursor/skills").exists())
+        expected_skills = {
+            "master-and-baseline",
+            "job-intake",
+            "job-prewrite",
+            "targeted-resume",
+            "targeted-cover-letter",
+            "status-and-publish",
+        }
+        for skill in expected_skills:
+            self.assertTrue((w.ROOT / ".agent/skills" / skill / "SKILL.md").is_file())
+        expected_rules = {
+            "general.md",
+            "intake.md",
+            "tailoring.md",
+            "content.md",
+            "status.md",
+            "structure.md",
+            "build.md",
+        }
+        for rule in expected_rules:
+            self.assertTrue((w.ROOT / ".agent/rules" / rule).is_file())
+
     def test_bootstrap_creates_untracked_files_without_overwriting(self) -> None:
         master = self.root / "content/master"
         master.mkdir(parents=True)

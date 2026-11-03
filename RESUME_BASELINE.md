@@ -45,16 +45,16 @@
 - **仅在用户明确提出“刷新 / 更新通用 baseline”时执行**。
 - 刷新步骤：
   1. 完整对照 `content/master/*.md` 最新事实与时间线状态（如在职阶段、在读课程、项目状态）。
-  2. 更新 `src/sections/baseline-universal.tex`，遵循 `docs/rules/content.md` 的一页规则、倒序时间线与宏排版约束。
+  2. 更新 `src/sections/baseline-universal.tex`，遵循 `.agent/rules/content.md` 的一页规则、倒序时间线与宏排版约束。
   3. 运行 `./scripts/build.sh baseline` 并用 `pdftoppm` 渲染图片检查单页填充度（正文底端 ≥ 80% 页高，无明显页底留白）。
   4. 更新本文件下方的刷新记录。
 - **不回写历史**：刷新 `baseline` 不会自动重编译任何 `targeted` 简历，也不会修改已投递岗位的历史快照。
 
 ## 五、所有新岗位如何从 Baseline 分叉
 
-1. 先按 `.cursor/skills/job-intake/SKILL.md` 完成岗位登记（`jd.md`、`notes.md`、`metadata.yaml`）。
-2. 按 `.cursor/skills/job-prewrite/SKILL.md` 完成 `targets/<slug>/tailoring.md` 预写。
-3. 按 `.cursor/skills/targeted-resume/SKILL.md`：
+1. 先按 `.agent/skills/job-intake/SKILL.md` 完成岗位登记（`jd.md`、`notes.md`、`metadata.yaml`）。
+2. 按 `.agent/skills/job-prewrite/SKILL.md` 完成 `targets/<slug>/tailoring.md` 预写。
+3. 按 `.agent/skills/targeted-resume/SKILL.md`：
    - 将 `src/sections/baseline-universal.tex` 复制为 `src/sections/targeted-<short-slug>.tex`；
    - 创建入口 `versions/cv/targeted/{id}-resume-<company>-<role>-<location>.tex`；
    - 在 `targets/<slug>/metadata.yaml` 登记 `resume_version`；
@@ -62,7 +62,7 @@
 
 ## 六、关于求职信（Cover Letter）
 
-求职信必须阐述具体公司、具体团队与具体岗位的申请动机及入职切入计划（见 `docs/rules/content.md` 五段式结构），因此**不设立跨公司通用的 Cover Letter Baseline**。每封求职信均在完成 `tailoring.md` 预写后，直接创建 `src/sections/letters/targeted-<short-slug>-letter.tex` 与 `versions/letter/targeted/{id}-cover-letter-<short-slug>.tex`。
+求职信必须阐述具体公司、具体团队与具体岗位的申请动机及入职切入计划（见 `.agent/rules/content.md` 五段式结构），因此**不设立跨公司通用的 Cover Letter Baseline**。每封求职信均在完成 `tailoring.md` 预写后，直接创建 `src/sections/letters/targeted-<short-slug>-letter.tex` 与 `versions/letter/targeted/{id}-cover-letter-<short-slug>.tex`。
 
 ## 七、当前 Baseline 刷新记录
 

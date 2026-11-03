@@ -1,6 +1,6 @@
 # 岗位链接与 JD 进项目规范 (Job URL & JD Intake Rules)
 
-> 适用场景：用户提供一条或多条招聘页 URL（或原始 JD 文本），要求「进项目」「登记岗位」「抓取 JD」。对应标准化 Skill：`.cursor/skills/job-intake/SKILL.md`。
+> 适用场景：用户提供一条或多条招聘页 URL（或原始 JD 文本），要求「进项目」「登记岗位」「抓取 JD」。对应标准化 Skill：`.agent/skills/job-intake/SKILL.md`。
 
 ---
 

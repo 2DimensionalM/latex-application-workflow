@@ -2,7 +2,7 @@
 
 本文件维护两张表：**（1）岗位总表（当前快照）** = 一行对应 `targets/<slug>/` 下一个真实岗位包；**（2）历史动作（带日期）** = 真实求职事件时间线（投递、面试、补材料、结果等），按日期倒序排列（最新在最上）。
 
-与仓库 `targets/<slug>/metadata.yaml` 的联动约束、行分组排序规则、编号规则及更新流程，详见 **`docs/rules/status.md`** 与 Skill **`.cursor/skills/status-and-publish/SKILL.md`**。
+与仓库 `targets/<slug>/metadata.yaml` 的联动约束、行分组排序规则、编号规则及更新流程，详见 **`.agent/rules/status.md`** 与 Skill **`.agent/skills/status-and-publish/SKILL.md`**。
 
 ---
 

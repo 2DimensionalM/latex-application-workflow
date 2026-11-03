@@ -11,7 +11,7 @@ Trigger this skill when:
 1. **Publishing approved materials (`--publish`)**: Moving a visually verified resume and/or cover letter from `output/review/` into the snapshot directories `output/cv/targeted/` and `output/cover-letters/pdf/targeted/` and linking them in `PROJECT_STATUS.md`.
 2. **Updating application progress**: Recording a real status transition (`已投递`, `一面`, `二面`, `补材料`, `已拿 offer`, `已拒`, `已下架`) in `targets/<slug>/metadata.yaml` and `PROJECT_STATUS.md`.
 
-Read `docs/rules/status.md`, `docs/rules/build.md`, and `scripts/README.md`.
+Read `.agent/rules/status.md`, `.agent/rules/build.md`, and `scripts/README.md`.
 
 ---
 

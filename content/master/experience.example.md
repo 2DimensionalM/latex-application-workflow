@@ -1,6 +1,6 @@
 # Experience (Master Fact Source)
 
-**Purpose:** Complete factual inventory of internships and professional roles, including multi-stage progression, ownership vs. upstream boundaries, deployment lifecycle status, internal codename mappings, and reusable candidate bullets. Editorial rules live in `docs/rules/content.md`.
+**Purpose:** Complete factual inventory of internships and professional roles, including multi-stage progression, ownership vs. upstream boundaries, deployment lifecycle status, internal codename mappings, and reusable candidate bullets. Editorial rules live in `.agent/rules/content.md`.
 
 **Sources:** Candidate verified employment records and project artifacts (YYYY-MM-DD).
 

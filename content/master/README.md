@@ -32,7 +32,7 @@ python3 scripts/workspace.py bootstrap
 
 1. **只记事实，不写裁剪规则**：
    - 本目录只记录**真实发生过什么**、**做到什么程度**、**有哪些证据**。
-   - 不要在本目录写“投递简历时省略某工具”、“一页放不下先删某段”等裁剪指令——跨岗通用裁剪规则维护在 `docs/rules/content.md`，单岗取舍维护在 `targets/<slug>/tailoring.md`。
+   - 不要在本目录写“投递简历时省略某工具”、“一页放不下先删某段”等裁剪指令——跨岗通用裁剪规则维护在 `.agent/rules/content.md`，单岗取舍维护在 `targets/<slug>/tailoring.md`。
 2. **不要因一页简历限制而删减母版事实**：
    - 对外简历只有一页，但 `content/master/` 应当保留完整的技术背景、历史阶段与候选 bullet，供不同方向的岗位随时提取。
 3. **显式标注待核实项（`Need verification`）**：

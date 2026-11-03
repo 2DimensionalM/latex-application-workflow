@@ -1,6 +1,6 @@
 # Tailoring Plan — 000 Example Company — Example Role
 
-> Schema template only. For real targets in `targets/<slug>/tailoring.md`, follow `.cursor/skills/job-prewrite/SKILL.md` and `docs/rules/tailoring.md`. Do not copy repo-wide rules here; record only role-specific decisions grounded in `content/master/`.
+> Schema template only. For real targets in `targets/<slug>/tailoring.md`, follow `.agent/skills/job-prewrite/SKILL.md` and `.agent/rules/tailoring.md`. Do not copy repo-wide rules here; record only role-specific decisions grounded in `content/master/`.
 
 ---
 

@@ -1,6 +1,6 @@
 # Skills (Master Fact Source)
 
-**Purpose:** Evidence-backed inventory of technical, analytical, AI-assisted engineering, and language skills. Every skill listed here must trace to verified evidence in `education.md`, `experience.md`, `projects.md`, or `certifications.md`. Presentation rules live in `docs/rules/content.md`.
+**Purpose:** Evidence-backed inventory of technical, analytical, AI-assisted engineering, and language skills. Every skill listed here must trace to verified evidence in `education.md`, `experience.md`, `projects.md`, or `certifications.md`. Presentation rules live in `.agent/rules/content.md`.
 
 **Sources:** Candidate verified inventory (YYYY-MM-DD).
 

@@ -1,6 +1,6 @@
 # Projects (Master Fact Source)
 
-**Purpose:** Factual inventory of academic, personal, and open-source technical projects. Single-page inclusion/omission rules live in `docs/rules/content.md` and per-role `targets/<slug>/tailoring.md`.
+**Purpose:** Factual inventory of academic, personal, and open-source technical projects. Single-page inclusion/omission rules live in `.agent/rules/content.md` and per-role `targets/<slug>/tailoring.md`.
 
 **Sources:** GitHub repositories and coursework deliverables (YYYY-MM-DD).
 

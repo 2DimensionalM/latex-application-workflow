@@ -1,6 +1,6 @@
 # Certifications & Courses (Master Fact Source)
 
-**Purpose:** Complete inventory of completed career/professional certifications, completed course credentials, and currently enrolled courses. Presentation rules (distinguishing career certifications from short courses, and never listing in-progress courses as completed certificates) live in `docs/rules/content.md`.
+**Purpose:** Complete inventory of completed career/professional certifications, completed course credentials, and currently enrolled courses. Presentation rules (distinguishing career certifications from short courses, and never listing in-progress courses as completed certificates) live in `.agent/rules/content.md`.
 
 **Sources:** Official issuer certificates and verification links (YYYY-MM-DD).
 

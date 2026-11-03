@@ -1,6 +1,6 @@
 # 母版维护与简历/求职信内容排版规范 (Master Data, Resume & Cover Letter Rules)
 
-> 适用场景：维护 `content/master/` 事实库、刷新通用 `baseline`、撰写或修改定向简历（`src/sections/*.tex`）与求职信（`src/sections/letters/*.tex`）。对应标准化 Skills：`master-and-baseline`、`targeted-resume`、`targeted-cover-letter`。
+> 适用场景：维护 `content/master/` 事实库、刷新通用 `baseline`、撰写或修改定向简历（`src/sections/*.tex`）与求职信（`src/sections/letters/*.tex`）。对应标准化 Skills：`.agent/skills/master-and-baseline`、`.agent/skills/targeted-resume`、`.agent/skills/targeted-cover-letter`。
 
 ---
 
@@ -9,7 +9,7 @@
 ### 1. `content/master/` 的唯一定位：可辩护事实与证据链 SoT
 - **只存事实，不存裁剪规则**：`content/master/` 记录候选人完整、真实的经历细节、时间线分期、课程与总评/分项成绩、脚本/系统真名、项目架构、证书编号及可复用的候选 bullet 池。
 - **不要因“一页简历放不下”而删减母版事实**：对外简历需要精炼，但母版应保留完整技术上下文与演进历史，以便后续针对不同类型岗位随时提取证据。
-- **不要在母版中写对外省略指令**：诸如“投递简历时默认不写某库名”、“一页放不下时先删 Projects”属于仓库级内容规则（维护在本文件）或单岗决策（维护在 `targets/<slug>/tailoring.md`），严禁混入 `content/master/*.md`。
+- **不要在母版中写对外省略指令**：诸如“投递简历时默认不写某库名”、“一页放不下时先删 Projects”属于仓库级内容规则（维护在本文件 `.agent/rules/content.md`）或单岗决策（维护在 `targets/<slug>/tailoring.md`），严禁混入 `content/master/*.md`。
 
 ### 2. 结构化事实记录的四个关键维度
 在维护 `content/master/experience.md`、`projects.md`、`education.md`、`skills.md`、`certifications.md` 时，必须写清以下边界：

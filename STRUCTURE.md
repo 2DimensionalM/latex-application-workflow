@@ -39,9 +39,12 @@
 
 | 路径 | 职责与版本控制边界 |
 |---|---|
-| `AGENTS.md` / `.cursor/rules/project-memory.mdc` | 始终加载的安全边界、Git 策略与任务路由（保持两处一致） |
-| `.cursor/skills/<skill-name>/SKILL.md` | 6 个标准化 Agentic Workflow 技能定义（按阶段触发或显式调用） |
-| `docs/rules/` | 按任务按需加载的长期细则（`general.md`、`intake.md`、`tailoring.md`、`content.md`、`status.md`、`structure.md`、`build.md`） |
+| `AGENTS.md` | 跨工具通用主入口：核心安全红线、Git 提交策略与任务阶段路由表 |
+| `CLAUDE.md` | Claude Code 入口路由，指向 `AGENTS.md` 与 `.agent/` |
+| `.cursor/rules/project-memory.mdc` | Cursor 薄路由壳，指向 `AGENTS.md` 与 `.agent/`（不直接存储长期记忆） |
+| `.agent/README.md` | 通用 Context Architecture 中心总览 |
+| `.agent/skills/<skill-name>/SKILL.md` | 6 个标准化 Agentic Workflow 阶段技能定义 |
+| `.agent/rules/<topic>.md` | 按任务按需加载的长期记忆与领域规则（`general.md`、`intake.md`、`tailoring.md`、`content.md`、`status.md`、`structure.md`、`build.md`） |
 | `content/master/` | 候选人完整事实库 SoT。仓库仅跟踪 `README.md` 与 `*.example.md` 模板；本地真实 `*.md` 被 `.gitignore` 忽略 |
 | `RESUME_BASELINE.md` | 唯一通用 CV 基线的定义、刷新边界与复用规范 |
 | `targets/<slug>/` | 一岗一包四件套：`metadata.yaml`、`jd.md`、`notes.md`、`tailoring.md`。仓库仅跟踪 `targets/example-company-role/` |

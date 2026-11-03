@@ -10,7 +10,7 @@ description: Register one or more job posting URLs or raw job descriptions into 
 Trigger this skill when the user shares one or more job posting URLs (or raw JD text) to register into the workspace.
 - **Default boundary**: Unless the user explicitly asks to pre-write (`tailoring.md`) or draft LaTeX in the same turn, stop after completing the target package intake, `PROJECT_STATUS.md` update, and `workspace.py check`.
 
-Read `docs/rules/intake.md`, `targets/README.md`, and `docs/rules/status.md` before starting.
+Read `.agent/rules/intake.md`, `targets/README.md`, and `.agent/rules/status.md` before starting.
 
 ---
 

@@ -1,6 +1,6 @@
 # `PROJECT_STATUS.md` 标准化与联动规范 (Status Tracking & Sync Rules)
 
-> 适用场景：新增岗位、更新简历/求职信产物链接、记录投递/面试/拒信/下架等求职进展。对应标准化 Skill：`.cursor/skills/status-and-publish/SKILL.md`。
+> 适用场景：新增岗位、更新简历/求职信产物链接、记录投递/面试/拒信/下架等求职进展。对应标准化 Skill：`.agent/skills/status-and-publish/SKILL.md`。
 
 ---
 

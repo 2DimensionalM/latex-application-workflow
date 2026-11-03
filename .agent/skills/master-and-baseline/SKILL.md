@@ -11,7 +11,7 @@ description: Initialize and maintain the candidate Master Fact Layer (content/ma
 - **Updating candidate facts**: Recording new internship/work stages, coursework/grades, projects, skills, or certifications into `content/master/`.
 - **Refreshing the Universal CV Baseline**: Updating `src/sections/baseline-universal.tex` and `RESUME_BASELINE.md` **only** when the user explicitly requests a baseline refresh.
 
-Read `content/master/README.md`, `RESUME_BASELINE.md`, and `docs/rules/content.md` before making edits.
+Read `content/master/README.md`, `RESUME_BASELINE.md`, and `.agent/rules/content.md` before making edits.
 
 ---
 
@@ -52,7 +52,7 @@ When the user provides new experiences, project details, grades, or screenshots:
 2. **Maintain Reusable Candidate Bullets**:
    - Under each role/project in `content/master/`, keep a bank of verified, high-density candidate bullets (`Action + Method/Tool + Impact/Delivery Surface`) for downstream tailoring.
 3. **Strict Separation Rule**:
-   - **Do NOT** write editorial rules ("omit on 1-page CV", "do not list library X") inside `content/master/*.md`. Put repo-wide editorial rules in `docs/rules/content.md` and single-role choices in `targets/<slug>/tailoring.md`.
+   - **Do NOT** write editorial rules ("omit on 1-page CV", "do not list library X") inside `content/master/*.md`. Put repo-wide editorial rules in `.agent/rules/content.md` and single-role choices in `targets/<slug>/tailoring.md`.
    - Updating `content/master/` **does not** automatically trigger a baseline rebuild or rewrite historical targeted resumes.
 
 ---
@@ -62,7 +62,7 @@ When the user provides new experiences, project details, grades, or screenshots:
 Only execute when the user explicitly says "刷新 baseline" / "refresh universal baseline":
 
 1. Cross-check `src/sections/baseline-universal.tex` against all files in `content/master/`.
-2. Enforce formatting and content constraints from `docs/rules/content.md`:
+2. Enforce formatting and content constraints from `.agent/rules/content.md`:
    - Strict reverse-chronological order in `Experience` (`\cvexpblock`).
    - Macro-only structural bolding (`\cvexpblock`, `\cveduhead`, `\cvskillblock`); no arbitrary `\textbf{...}` inside bullets or `\cvedunote{...}`.
    - Single-page target with balanced bottom density (last content line ≥ 80% page height).

@@ -1,6 +1,6 @@
 # Education (Master Fact Source)
 
-**Purpose:** Complete factual record of degrees, coursework, grades, and thesis/capstone projects. CV formatting and omission rules live in `docs/rules/content.md`.
+**Purpose:** Complete factual record of degrees, coursework, grades, and thesis/capstone projects. CV formatting and omission rules live in `.agent/rules/content.md`.
 
 **Sources:** Official transcripts and university course records (YYYY-MM-DD).
 

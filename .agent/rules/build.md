@@ -26,7 +26,7 @@
    - 求职信正文（`Dear ...` 至 `Sincerely,` / `Kind regards,` / `Best regards,` 之间）底端位置低于页面高度的 **60%**（`letter body ends above 60% page-height line`）；
    - `latex.log` 存在 LaTeX Error / Emergency stop。
 2. **审阅警告（`warnings`，提示人工复核）**：
-   - 简历正文末行低于页面高度的 **80%**（提示可能存在明显页底留白，需按 `docs/rules/content.md` 执行回补）；
+   - 简历正文末行低于页面高度的 **80%**（提示可能存在明显页底留白，需按 `.agent/rules/content.md` 执行回补）；
    - 求职信未能识别标准称呼/落款边界（需人工目视测量 60% 高度）；
    - `latex.log` 存在 `Overfull \hbox` / `Underfull \vbox` 警告。
 3. **强制图片目视检查**：

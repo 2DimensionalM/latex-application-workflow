@@ -10,7 +10,7 @@ description: Draft, compile, and visually QA a targeted 5-paragraph LaTeX cover 
 Trigger this skill when drafting or updating a targeted cover letter for a job package `targets/<slug>/` (internal ID `<id>`).
 - **Prerequisite**: `targets/<slug>/tailoring.md` must be completed first. Do not use a generic "universal cover letter"; every cover letter must be written specifically for the target company and role.
 
-Read `docs/rules/content.md`, `docs/rules/tailoring.md`, `targets/<slug>/tailoring.md`, `targets/<slug>/jd.md`, `targets/<slug>/notes.md`, and the target's resume section (`src/sections/targeted-<short-slug>.tex`).
+Read `.agent/rules/content.md`, `.agent/rules/tailoring.md`, `targets/<slug>/tailoring.md`, `targets/<slug>/jd.md`, `targets/<slug>/notes.md`, and the target's resume section (`src/sections/targeted-<short-slug>.tex`).
 
 ---
 

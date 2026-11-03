@@ -1,6 +1,6 @@
 # Candidate Profile & Logistics (Master Fact Source)
 
-**Purpose:** Normalized facts for candidate positioning, target role families, availability, and reusable 2–3 sentence Profile summaries. Presentation rules live in `docs/rules/content.md`.
+**Purpose:** Normalized facts for candidate positioning, target role families, availability, and reusable 2–3 sentence Profile summaries. Presentation rules live in `.agent/rules/content.md`.
 
 **Sources:** Candidate verified facts (YYYY-MM-DD).
 

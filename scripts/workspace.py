@@ -667,7 +667,7 @@ def init_target(root: Path, args: argparse.Namespace) -> None:
             f"- **Internal ID:** `{ident}`\n"
             f"- **Source URL:** {args.url}\n"
             f"- **Captured Date:** {meta['date_saved']}\n\n"
-            f"The posting has not been retrieved or verified yet. Follow `.cursor/skills/job-intake/SKILL.md` to populate the verified English JD.\n",
+            f"The posting has not been retrieved or verified yet. Follow `.agent/skills/job-intake/SKILL.md` to populate the verified English JD.\n",
             encoding="utf-8",
         )
         (folder / "notes.md").write_text(
@@ -677,7 +677,7 @@ def init_target(root: Path, args: argparse.Namespace) -> None:
         )
         (folder / "tailoring.md").write_text(
             f"# Tailoring — pending\n\n"
-            f"No tailoring or application action performed yet. Follow `.cursor/skills/job-prewrite/SKILL.md` before creating targeted LaTeX files.\n",
+            f"No tailoring or application action performed yet. Follow `.agent/skills/job-prewrite/SKILL.md` before creating targeted LaTeX files.\n",
             encoding="utf-8",
         )
         statusfile.write_text(old.replace(anchor, anchor + "\n" + row, 1), encoding="utf-8")

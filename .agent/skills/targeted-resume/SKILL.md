@@ -8,9 +8,9 @@ description: Draft, compile, and visually QA a single-page targeted LaTeX resume
 ## When to Use
 
 Trigger this skill when drafting or updating a targeted resume for a specific job package `targets/<slug>/` (internal ID `<id>`).
-- **Prerequisite**: `targets/<slug>/tailoring.md` must be completed first. If `tailoring.md` is still a placeholder, execute `.cursor/skills/job-prewrite/SKILL.md` first!
+- **Prerequisite**: `targets/<slug>/tailoring.md` must be completed first. If `tailoring.md` is still a placeholder, execute `.agent/skills/job-prewrite/SKILL.md` first!
 
-Read `docs/rules/content.md`, `docs/rules/tailoring.md`, `RESUME_BASELINE.md`, `targets/<slug>/tailoring.md`, `targets/<slug>/jd.md`, and `src/sections/baseline-universal.tex`.
+Read `.agent/rules/content.md`, `.agent/rules/tailoring.md`, `RESUME_BASELINE.md`, `targets/<slug>/tailoring.md`, `targets/<slug>/jd.md`, and `src/sections/baseline-universal.tex`.
 
 ---
 
@@ -21,7 +21,7 @@ Task Progress:
 - [ ] Step 1: Verify `targets/<slug>/tailoring.md` is complete
 - [ ] Step 2: Create `src/sections/targeted-<short-slug>.tex` from `src/sections/baseline-universal.tex`
 - [ ] Step 3: Create `versions/cv/targeted/{id}-resume-<company>-<role>-<location>.tex` & update `metadata.yaml`
-- [ ] Step 4: Tailor Profile, Education, Experience bullets, and Skills per `tailoring.md` and `docs/rules/content.md`
+- [ ] Step 4: Tailor Profile, Education, Experience bullets, and Skills per `tailoring.md` and `.agent/rules/content.md`
 - [ ] Step 5: Run `./scripts/build.sh resume:<id>` and inspect `qa.json` (must be 1 page, 0 LaTeX errors)
 - [ ] Step 6: Render PNG via `pdftoppm` and visually verify page density (if <80% height / bottom whitespace, backfill & recompile)
 - [ ] Step 7: Update `PROJECT_STATUS.md` stage (`写简历` / `审核简历` / `待投递`) and run `python3 scripts/workspace.py check`
@@ -48,7 +48,7 @@ Task Progress:
   ```
 - Set `resume_version: "versions/cv/targeted/{id}-resume-<company>-<role>-<location>.tex"` in `targets/<slug>/metadata.yaml`.
 
-### 2. Apply Content & Formatting Rules (`docs/rules/content.md`)
+### 2. Apply Content & Formatting Rules (`.agent/rules/content.md`)
 - **Strict Reverse-Chronological Experience Order**: Never reorder `\cvexpblock` employer blocks by JD relevance. Keep newest/current roles at the top; emphasize relevance via bullet selection and phrasing.
 - **No Random `\textbf{...}`**: Only rely on structural bolding inside `\cvexpblock`, `\cveduhead`, and `\cvskillblock`. Never put `\textbf{...}` inside `\item` bullets or `\cvedunote{...}` (use plain `Coursework:` and `\textit{...}` for course names).
 - **Bullet Construction & Line Width**: Write `Action + Method/Tool + Impact/Stakeholder` bullets. Aim to fill each bullet's final line cleanly—avoid orphan 1–3 word line wraps that waste vertical space.
@@ -63,7 +63,7 @@ pdftoppm -png -r 150 output/review/{id}-resume-<company>-<role>-<location>/{id}-
 Read `/tmp/cv-review-<id>-1.png` using the Read tool to inspect the visual layout:
 
 - **Case A — Spills onto 2 pages (`pages > 1`)**:
-  Follow the compression hierarchy in `docs/rules/content.md`:
+  Follow the compression hierarchy in `.agent/rules/content.md`:
   1. Tighten long technical clauses and remove redundant phrasing first;
   2. Eliminate 1–3 word orphan line wraps;
   3. Tighten `Profile`, `Skills`, and `Education` notes;
