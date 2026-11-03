@@ -181,6 +181,17 @@ class WorkspaceTests(unittest.TestCase):
         self.assertTrue(any("missing version" in e for e in errors))
         self.assertTrue(any("link/name mismatch" in e for e in errors))
 
+    def test_html_entry_uses_chrome_engine(self) -> None:
+        rec = w.record("versions/cv/targeted/001-resume-acme-intern-nl.html", ["resume:001"])
+        self.assertEqual(rec["engine"], "chrome")
+        self.assertEqual(rec["kind"], "resume")
+        self.assertEqual(rec["pdf"], "output/cv/targeted/001-resume-acme-intern-nl.pdf")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "versions/cv/targeted").mkdir(parents=True)
+            (root / rec["entry"]).write_text("<html></html>", encoding="utf-8")
+            self.assertEqual(w.dependencies(root, rec["entry"]), {rec["entry"]})
+
     def test_path_escape_rejected(self) -> None:
         p = self.init()
         m = p / "metadata.yaml"

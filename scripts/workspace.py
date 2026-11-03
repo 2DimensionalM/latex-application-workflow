@@ -150,10 +150,12 @@ def record(entry: str, aliases: list[str], engine: str = "pdflatex") -> dict:
         or p.parts[0] != "versions"
         or p.parts[1] not in ("cv", "letter")
         or p.parts[2] not in ("base", "baseline", "targeted")
-        or p.suffix != ".tex"
+        or p.suffix not in (".tex", ".html")
     ):
         raise ValueError(f"invalid entry: {entry}")
-    if engine not in ("pdflatex", "xelatex"):
+    if p.suffix == ".html":
+        engine = "chrome"
+    if engine not in ("pdflatex", "xelatex", "chrome"):
         raise ValueError(f"invalid engine for {entry}: {engine}")
     kind = "resume" if p.parts[1] == "cv" else "letter"
     sub = p.parts[2]
@@ -233,6 +235,11 @@ def dependencies(root: Path, entry: str) -> set[str]:
     """Read only public literal TeX inputs. Private input is an opaque dependency."""
     root = root.resolve()
     found: set[str] = set()
+    if entry.endswith(".html"):
+        safe_path(root, entry)
+        if not (root / entry).is_file():
+            raise ValueError(f"missing input: {entry}")
+        return {entry}
 
     def visit(p: Path) -> None:
         rel = p.relative_to(root).as_posix()
@@ -391,7 +398,7 @@ def validate(root: Path, require_pdfs: bool = False) -> dict:
             error(str(exc))
 
     if (root / "versions").is_dir():
-        for p in (root / "versions").rglob("*.tex"):
+        for p in [*(root / "versions").rglob("*.tex"), *(root / "versions").rglob("*.html")]:
             rel = p.relative_to(root).as_posix()
             if rel not in registered:
                 error(f"unregistered entry: {rel}")
@@ -513,9 +520,67 @@ def qa(pdf: Path, kind: str, log: Path | None = None) -> dict:
     }
 
 
+def chrome_binary() -> str:
+    candidates = [
+        os.environ.get("CHROME_BIN", ""),
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        shutil.which("google-chrome") or "",
+        shutil.which("chromium") or "",
+    ]
+    found = next((c for c in candidates if c and Path(c).is_file()), None)
+    if not found:
+        raise ValueError("Chrome not found; install Chrome or set CHROME_BIN")
+    return found
+
+
+def build_html(root: Path, rec: dict, publish: bool = False) -> int:
+    """Render an HTML resume to PDF with headless Chrome, then run the same PDF QA."""
+    review = root / "output/review" / rec["jobname"]
+    review.mkdir(parents=True, exist_ok=True)
+    destination = root / rec["pdf"] if publish else review / (rec["jobname"] + ".pdf")
+    if publish and destination.exists():
+        raise ValueError("refusing to overwrite an existing PDF snapshot; use review build")
+    for name in (rec["jobname"] + ".pdf", "qa.json", "latex.log"):
+        (review / name).unlink(missing_ok=True)
+    source = (root / rec["entry"]).resolve()
+    review_pdf = review / (rec["jobname"] + ".pdf")
+    with tempfile.TemporaryDirectory(prefix="cv-html-") as temp:
+        run = subprocess.run(
+            [
+                chrome_binary(),
+                "--headless=new",
+                "--disable-gpu",
+                "--no-pdf-header-footer",
+                "--virtual-time-budget=8000",
+                f"--user-data-dir={temp}",
+                f"--print-to-pdf={review_pdf}",
+                source.as_uri(),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    (review / "build.log").write_text(run.stdout + run.stderr, encoding="utf-8")
+    if run.returncode or not review_pdf.is_file():
+        raise ValueError(f"Chrome PDF export failed; inspect {review / 'build.log'}")
+    report = qa(review_pdf, rec["kind"], None)
+    if publish:
+        if report["errors"]:
+            raise ValueError("cannot publish failing QA; review build only")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        with destination.open("xb") as out, review_pdf.open("rb") as inp:
+            shutil.copyfileobj(inp, out)
+    report["pdf"] = str(destination)
+    (review / "qa.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps(report, indent=2))
+    return 1 if report["errors"] else 0
+
+
 def build(
     root: Path, rec: dict, public_header: bool = False, publish: bool = False
 ) -> int:
+    if rec["engine"] == "chrome":
+        return build_html(root, rec, publish)
     review = root / "output/review" / rec["jobname"]
     review.mkdir(parents=True, exist_ok=True)
     destination = root / rec["pdf"] if publish else review / (rec["jobname"] + ".pdf")

@@ -59,6 +59,8 @@
 | `versions/letter/{baseline,targeted}/` | 求职信编译入口 |
 | `output/review/<JOBNAME>/` | 默认隔离构建输出（PDF、`build.log`、`latex.log`、`qa.json`），不会覆盖已发布快照 |
 | `output/cv/`、`output/cover-letters/pdf/` | `--publish` 产出的正式投递快照目录 |
+| `webui/` | 本地网页工作台（`server.py` + `index.html`），仅监听 127.0.0.1，不含私有数据 |
+| `versions/cv/targeted/*.html` | HTML 定向简历入口（Git 忽略，由 headless Chrome 渲染并走同一套 PDF QA） |
 | `scripts/workspace.py` | 核心 Harness：支持 `bootstrap`、`init`、`check`、`list`、`build`、`qa`、`affected` |
 | `scripts/build.sh`、`scripts/build_all.py` | 单目标构建包装器与批量隔离构建编排器 |
 | `scripts/privacy_check.py` | 隐私与敏感文件门禁检查器（拦截私有路径、PDF 二进制与邮箱/电话/密钥） |

@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>求职简历工作台</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1c2430; --muted:#5a6472; --accent:#1f4e79; --rule:#dde3ea; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#14181d; --card:#1d232b; --ink:#e6eaf0; --muted:#9aa5b3; --accent:#7fb2e5; --rule:#2f3743; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.5 -apple-system,"Segoe UI",sans-serif; }
+  main { max-width:1100px; margin:0 auto; padding:20px 16px 60px; }
+  h1 { font-size:20px; margin:0 0 16px; }
+  section { background:var(--card); border:1px solid var(--rule); border-radius:10px; padding:16px; margin-bottom:16px; }
+  h2 { font-size:15px; margin:0 0 10px; color:var(--accent); }
+  input, textarea, select, button { font:inherit; color:inherit; }
+  input[type=text], textarea, select { width:100%; padding:8px; border:1px solid var(--rule); border-radius:6px; background:var(--bg); }
+  textarea { min-height:90px; margin-top:8px; }
+  button { padding:7px 14px; border-radius:6px; border:1px solid var(--accent); background:var(--accent); color:#fff; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--accent); }
+  button:disabled { opacity:.5; cursor:wait; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--rule); vertical-align:middle; }
+  th { color:var(--muted); font-weight:500; font-size:12px; }
+  td select { width:auto; }
+  .actions { display:flex; gap:6px; flex-wrap:wrap; }
+  pre { background:var(--bg); border:1px solid var(--rule); border-radius:6px; padding:10px; white-space:pre-wrap; max-height:260px; overflow:auto; margin:10px 0 0; }
+  iframe { width:100%; height:80vh; border:1px solid var(--rule); border-radius:6px; background:#fff; margin-top:8px; }
+  .muted { color:var(--muted); }
+  @media (max-width:700px) { .hide-m { display:none; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>求职简历工作台</h1>
+
+  <section>
+    <h2>新建申请</h2>
+    <input type="text" id="url" placeholder="粘贴职位链接 (https://...)">
+    <textarea id="jd" placeholder="或者直接粘贴 JD 文本(链接读不了时用这个)"></textarea>
+    <div class="actions" style="margin-top:8px"><button id="go">生成定制简历</button></div>
+    <pre id="log" hidden></pre>
+  </section>
+
+  <section>
+    <h2>投递看板</h2>
+    <table>
+      <thead><tr><th>公司</th><th>职位</th><th class="hide-m">地点</th><th>状态</th><th>操作</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="5" class="muted">加载中…</td></tr></tbody>
+    </table>
+  </section>
+
+  <section id="viewer" hidden>
+    <h2 id="vtitle"></h2>
+    <div class="actions"><button class="ghost" onclick="window.open($('pv').src)">新窗口打开 / 下载 PDF</button><button class="ghost" id="closeV">关闭</button></div>
+    <iframe name="pv" id="pv"></iframe>
+    <pre id="cl" hidden></pre>
+  </section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const post = (u, b) => fetch(u, {method:'POST', body:JSON.stringify(b||{})}).then(r => r.json());
+
+async function load() {
+  const {targets, labels} = await fetch('/api/targets').then(r => r.json());
+  $('rows').innerHTML = targets.length ? targets.map(t => `
+    <tr>
+      <td>${esc(t.company)}</td>
+      <td>${esc(t.role)}</td>
+      <td class="hide-m">${esc(t.location)}</td>
+      <td><select data-slug="${t.slug}">${(labels.includes(t.progress) ? labels : [t.progress, ...labels]).map(s => `<option ${s===t.progress?'selected':''}>${esc(s)}</option>`).join('')}</select></td>
+      <td class="actions">
+        ${t.resume_is_html ? `<button class="ghost" data-prev="${t.slug}">简历预览</button>` : ''}
+        <button class="ghost" data-cl="${t.slug}">${t.has_cover_letter ? '查看求职信' : '生成求职信'}</button>
+        ${t.source_url ? `<a href="${esc(t.source_url)}" target="_blank" rel="noopener">职位页</a>` : ''}
+      </td>
+    </tr>`).join('') : '<tr><td colspan="5" class="muted">还没有申请</td></tr>';
+}
+
+function watch(job, box, done) {
+  box.hidden = false;
+  const tick = async () => {
+    const j = await fetch('/api/jobs/' + job).then(r => r.json());
+    box.textContent = j.log || '运行中…';
+    box.scrollTop = box.scrollHeight;
+    if (j.state === 'running') return setTimeout(tick, 1500);
+    done(j);
+  };
+  tick();
+}
+
+$('go').onclick = async () => {
+  const url = $('url').value.trim(), jd = $('jd').value.trim();
+  $('go').disabled = true;
+  const r = await post('/api/apply', {url, jd});
+  if (r.error) { $('go').disabled = false; return alert(r.error); }
+  watch(r.job, $('log'), j => {
+    $('go').disabled = false;
+    if (j.log.includes('NEED_JD_TEXT')) alert('链接读不了,请把 JD 文本粘贴到下面的框里再试一次。');
+    load();
+  });
+};
+
+$('rows').onchange = async e => {
+  const slug = e.target.dataset.slug;
+  if (!slug) return;
+  if (!confirm(`把状态改为「${e.target.value}」?只有真实发生的事件才应该记录。`)) return load();
+  const r = await post(`/api/targets/${slug}/progress`, {label: e.target.value}); if (r.error) alert(r.error);
+  load();
+};
+
+$('rows').onclick = async e => {
+  const prev = e.target.dataset.prev, cl = e.target.dataset.cl;
+  if (prev) { show(prev, '简历预览'); $('pv').hidden = false; $('cl').hidden = true; $('pv').src = '/preview/' + prev; }
+  if (cl) {
+    const {text} = await fetch(`/api/targets/${cl}/cover-letter`).then(r => r.json());
+    show(cl, '求职信'); $('pv').hidden = true; $('cl').hidden = false;
+    if (text) return $('cl').textContent = text;
+    $('cl').textContent = '生成中…';
+    const r = await post(`/api/targets/${cl}/cover-letter`);
+    watch(r.job, $('cl'), async () => {
+      const t = await fetch(`/api/targets/${cl}/cover-letter`).then(r => r.json());
+      $('cl').textContent = t.text || '生成失败';
+      load();
+    });
+  }
+};
+function show(slug, label) { $('viewer').hidden = false; $('vtitle').textContent = `${label} · ${slug}`; $('viewer').scrollIntoView(); }
+$('closeV').onclick = () => { $('viewer').hidden = true; $('pv').src = 'about:blank'; };
+load();
+</script>
+</body>
+</html>

@@ -18,6 +18,8 @@ targets/*/
 # Real targeted LaTeX entries and sections (keep placeholders tracked)
 versions/cv/targeted/*.tex
 versions/letter/targeted/*.tex
+versions/cv/targeted/*.html
+versions/letter/targeted/*.html
 !versions/letter/targeted/cover-letter-placeholder.tex
 src/sections/targeted-*.tex
 src/sections/letters/targeted-*.tex

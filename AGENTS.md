@@ -24,6 +24,8 @@
 | **1. 岗位链接 / JD 进项目（Intake）** | `.agent/skills/job-intake/SKILL.md` | `.agent/rules/intake.md`、`targets/README.md`、`.agent/rules/status.md` |
 | **2. 岗位预写与证据映射（Pre-write `tailoring.md`）** | `.agent/skills/job-prewrite/SKILL.md` | `.agent/rules/tailoring.md`、`.agent/rules/content.md`、该岗 `jd.md` / `notes.md` |
 | **3. 定向简历制作与一页留白 QA（Targeted Resume）** | `.agent/skills/targeted-resume/SKILL.md` | `.agent/rules/content.md`、`.agent/rules/tailoring.md`、`RESUME_BASELINE.md`、该岗四件套 |
+| **3b. 定向 HTML 简历（母版为 `content/master/resume.html`）** | `.agent/skills/targeted-resume-html/SKILL.md` | `.agent/rules/content.md`、`.agent/rules/tailoring.md`、该岗四件套 |
 | **4. 定向求职信制作与 60% 篇幅 QA（Targeted Cover Letter）** | `.agent/skills/targeted-cover-letter/SKILL.md` | `.agent/rules/content.md`、`.agent/rules/tailoring.md`、该岗四件套与对应简历 |
 | **5. 成品发布、状态更新与 `PROJECT_STATUS.md` 联动** | `.agent/skills/status-and-publish/SKILL.md` | `.agent/rules/status.md`、`scripts/README.md`、对应 `metadata.yaml` |
 | **构建 / QA / 脚本与 Context Architecture 维护** | — | `.agent/README.md`、`scripts/README.md`、`.agent/rules/build.md`、`.agent/rules/structure.md`、`STRUCTURE.md`、`.agent/rules/general.md` |
+| 本地网页工作台 `webui/` | — | `.agent/rules/webui.md` |
