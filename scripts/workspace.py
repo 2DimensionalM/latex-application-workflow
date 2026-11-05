@@ -534,6 +534,19 @@ def chrome_binary() -> str:
     return found
 
 
+def render_png(pdf: Path) -> str | None:
+    """Page-1 PNG next to the PDF for visual review (pdfplumber/pypdfium2; no poppler needed)."""
+    try:
+        import pdfplumber
+
+        png = pdf.with_suffix(".png")
+        with pdfplumber.open(pdf) as document:
+            document.pages[0].to_image(resolution=110).save(png)
+        return str(png)
+    except Exception:  # visual aid only; never fail a build over it
+        return None
+
+
 WEB_FONT_LINKS = re.compile(r"<link[^>]+fonts\.(?:googleapis|gstatic)\.com[^>]*>", re.I)
 
 
@@ -583,10 +596,23 @@ def build_html(root: Path, rec: dict, publish: bool = False) -> int:
             text=True,
             timeout=120,
         )
+        # The page box clips overflow (overflow: hidden), so the PDF stays one page even when
+        # content is cut off. The template's own checkOverflow() marks #overflowWarn; read it back.
+        clipped = None
+        if 'id="overflowWarn"' in html_text:
+            dom = subprocess.run(
+                [chrome_binary(), "--headless=new", "--disable-gpu", "--virtual-time-budget=1500",
+                 f"--user-data-dir={Path(temp) / 'profile'}", "--dump-dom", render.as_uri()],
+                capture_output=True, text=True, timeout=120,
+            ).stdout
+            clipped = bool(re.search(r'class="warn show"[^>]*id="overflowWarn"|id="overflowWarn"[^>]*class="warn show"', dom))
     (review / "build.log").write_text(run.stdout + run.stderr, encoding="utf-8")
     if run.returncode or not review_pdf.is_file():
         raise ValueError(f"Chrome PDF export failed; inspect {review / 'build.log'}")
     report = qa(review_pdf, rec["kind"], None)
+    if clipped:
+        report["errors"].append("content overflows the page box and is clipped; shorten content")
+    report["png"] = render_png(review_pdf)
     if publish:
         if report["errors"]:
             raise ValueError("cannot publish failing QA; review build only")

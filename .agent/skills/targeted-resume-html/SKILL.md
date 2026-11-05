@@ -10,7 +10,7 @@ Prerequisite: `targets/<slug>/tailoring.md` is complete (`.agent/skills/job-prew
 1. **Parent**: `content/master/resume.html` (Git-ignored), generated from `content/master/*.md` + the private header by `.venv/bin/python scripts/render_html.py`. Facts are edited in the `.md` files, never in the HTML; re-render after a fact change. Never print, stage or commit the parent.
 2. **Create** `versions/cv/targeted/{id}-resume-<company>-<role>-<location>.html` (Git-ignored) by copying the master and changing only selection, order and wording of facts already present. Keep CSS/structure; keep experience in reverse-chronological order; never alter dates, titles, employers, numbers or credentials.
 3. Set `resume_version` in `targets/<slug>/metadata.yaml` to that path.
-4. **Build + QA**: `.venv/bin/python scripts/workspace.py build resume:<id>` renders with headless Chrome and runs the same PDF QA (1 page, body ends >= 80% page height). Fix and rebuild until `qa.json` has no errors.
+4. **Build + QA**: `.venv/bin/python scripts/workspace.py build resume:<id>` renders with headless Chrome and runs the same PDF QA (1 page, body ends >= 80% page height). Fix and rebuild until `qa.json` has no errors. For the visual check, Read the page-1 PNG the build writes (`png` in `qa.json`); no poppler/pdftoppm is needed.
 5. Publish only with `--publish` after the user has reviewed the PDF; then follow `.agent/skills/status-and-publish/SKILL.md`.
 
 Never claim skills the master does not support; list them as gaps in `tailoring.md`.
