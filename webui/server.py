@@ -253,20 +253,58 @@ def cover_prompt(slug: str) -> str:
     )
 
 
-def revise_target(slug: str, meta: dict, kind: str, instruction: str) -> str:
-    """Back up the current document, then let Claude revise it per the owner's instruction."""
+def target_doc(slug: str, meta: dict, kind: str) -> str:
+    """Repo-relative path of the resume or cover letter that revisions apply to."""
     if kind == "resume":
         doc = meta.get("resume_version") or ""
         if not doc.endswith(".html") or not (ROOT / doc).is_file():
             raise ValueError("这个岗位还没有 HTML 定制简历")
-    else:
-        doc = f"targets/{slug}/cover_letter.md"
-        if not (ROOT / doc).is_file():
-            raise ValueError("这个岗位还没有求职信草稿")
+        return doc
+    doc = f"targets/{slug}/cover_letter.md"
+    if not (ROOT / doc).is_file():
+        raise ValueError("这个岗位还没有求职信草稿")
+    return doc
+
+
+def backup(slug: str, doc: str) -> None:
     history = ROOT / "targets" / slug / ".history"
     history.mkdir(exist_ok=True)
     src = ROOT / doc
-    (history / f"{src.stem}.{dt.datetime.now():%Y%m%d-%H%M%S}{src.suffix}").write_bytes(src.read_bytes())
+    stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+    dest = history / f"{src.stem}.{stamp}{src.suffix}"
+    n = 1
+    while dest.exists():  # two saves within one second
+        dest, n = history / f"{src.stem}.{stamp}-{n}{src.suffix}", n + 1
+    dest.write_bytes(src.read_bytes())
+
+
+def versions(slug: str, doc: str) -> list[dict]:
+    """Backups of one document, newest first."""
+    src = ROOT / doc
+    history = ROOT / "targets" / slug / ".history"
+    found = []
+    for f in history.glob(f"{src.stem}.*{src.suffix}") if history.is_dir() else []:
+        m = re.fullmatch(re.escape(src.stem) + r"\.(\d{8})-(\d{6})(?:-(\d+))?" + re.escape(src.suffix), f.name)
+        if m:
+            when = dt.datetime.strptime(m[1] + m[2], "%Y%m%d%H%M%S")
+            found.append({"name": f.name, "when": when.strftime("%Y-%m-%d %H:%M:%S"),
+                          "order": (m[1] + m[2], int(m[3] or 0))})
+    found.sort(key=lambda v: v["order"], reverse=True)
+    return [{"name": v["name"], "when": v["when"]} for v in found]
+
+
+def restore(slug: str, doc: str, name: str) -> None:
+    """Put a backup back in place; the current version is backed up first so a restore can be undone."""
+    if name not in {v["name"] for v in versions(slug, doc)}:
+        raise ValueError("找不到这个历史版本")
+    backup(slug, doc)
+    (ROOT / doc).write_bytes((ROOT / "targets" / slug / ".history" / name).read_bytes())
+
+
+def revise_target(slug: str, meta: dict, kind: str, instruction: str) -> str:
+    """Back up the current document, then let Claude revise it per the owner's instruction."""
+    doc = target_doc(slug, meta, kind)
+    backup(slug, doc)
     rules = (
         f"Then rebuild with `.venv/bin/python scripts/workspace.py build resume:{meta['internal_id']}` and keep the "
         "one-page and fill QA passing; experience stays reverse-chronological."
@@ -342,6 +380,11 @@ class Handler(BaseHTTPRequestHandler):
                 if not pdf.is_file():
                     master_render()
                 return self.send(200, pdf.read_bytes(), "application/pdf")
+            if m := re.fullmatch(r"/api/targets/([a-z0-9-]+)/versions/(resume|letter)", path):
+                meta = self.known(m[1])
+                if not meta:
+                    return self.json({"error": "unknown target"}, 404)
+                return self.json({"versions": versions(m[1], target_doc(m[1], meta, m[2]))})
             if m := re.fullmatch(r"/preview/([a-z0-9-]+)", path):
                 meta = self.known(m[1])
                 entry = (meta or {}).get("resume_version") or ""
@@ -392,6 +435,13 @@ class Handler(BaseHTTPRequestHandler):
                     return self.json({"error": "bad request"}, 400)
                 with LOCK:
                     set_progress(m[1], label)
+                return self.json({"ok": True})
+            if m := re.fullmatch(r"/api/targets/([a-z0-9-]+)/restore", self.path):
+                meta = self.known(m[1])
+                if not meta or data.get("kind") not in ("resume", "letter"):
+                    return self.json({"error": "bad request"}, 400)
+                with LOCK:
+                    restore(m[1], target_doc(m[1], meta, data["kind"]), str(data.get("name", "")))
                 return self.json({"ok": True})
             if m := re.fullmatch(r"/api/targets/([a-z0-9-]+)/revise", self.path):
                 meta = self.known(m[1])
