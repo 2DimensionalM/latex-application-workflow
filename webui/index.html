@@ -5,86 +5,142 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>求职简历工作台</title>
 <style>
-  :root { --bg:#f6f7f9; --card:#fff; --ink:#1c2430; --muted:#5a6472; --accent:#1f4e79; --rule:#dde3ea; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#14181d; --card:#1d232b; --ink:#e6eaf0; --muted:#9aa5b3; --accent:#7fb2e5; --rule:#2f3743; } }
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1c2430; --muted:#5a6472; --accent:#1f4e79; --rule:#dde3ea;
+          --ok:#1e7a46; --bad:#b3261e; --soft:#eef3f8; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#14181d; --card:#1d232b; --ink:#e6eaf0; --muted:#9aa5b3;
+          --accent:#7fb2e5; --rule:#2f3743; --ok:#6fcf97; --bad:#f2948c; --soft:#232b35; } }
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.5 -apple-system,"Segoe UI",sans-serif; }
-  main { max-width:1100px; margin:0 auto; padding:20px 16px 60px; }
-  h1 { font-size:20px; margin:0 0 16px; }
+  main { max-width:1180px; margin:0 auto; padding:20px 16px 60px; }
+  h1 { font-size:20px; margin:0 0 12px; }
   section { background:var(--card); border:1px solid var(--rule); border-radius:10px; padding:16px; margin-bottom:16px; }
   h2 { font-size:15px; margin:0 0 10px; color:var(--accent); }
   input, textarea, select, button { font:inherit; color:inherit; }
   input[type=text], textarea, select { width:100%; padding:8px; border:1px solid var(--rule); border-radius:6px; background:var(--bg); }
-  textarea { min-height:90px; margin-top:8px; }
+  textarea { min-height:80px; margin-top:8px; }
   button { padding:7px 14px; border-radius:6px; border:1px solid var(--accent); background:var(--accent); color:#fff; cursor:pointer; }
   button.ghost { background:transparent; color:var(--accent); }
+  .actions button, .actions a { white-space:nowrap; }
   button:disabled { opacity:.5; cursor:wait; }
+  a { color:var(--accent); }
+  .stats { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+  .stat { background:var(--card); border:1px solid var(--rule); border-radius:10px; padding:10px 16px; min-width:120px; }
+  .stat b { display:block; font-size:22px; font-variant-numeric:tabular-nums; }
+  .stat span { color:var(--muted); font-size:12px; }
+  .table-wrap { overflow-x:auto; }
   table { width:100%; border-collapse:collapse; }
   th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--rule); vertical-align:middle; }
-  th { color:var(--muted); font-weight:500; font-size:12px; }
+  th { color:var(--muted); font-weight:500; font-size:12px; white-space:nowrap; }
+  td.num, td.date { font-variant-numeric:tabular-nums; white-space:nowrap; color:var(--muted); }
   td select { width:auto; }
-  .actions { display:flex; gap:6px; flex-wrap:wrap; }
-  pre { background:var(--bg); border:1px solid var(--rule); border-radius:6px; padding:10px; white-space:pre-wrap; max-height:260px; overflow:auto; margin:10px 0 0; }
+  tr.group-head td { background:var(--soft); color:var(--muted); font-size:12px; font-weight:600; }
+  .actions { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  /* progress panel */
+  .job { margin-top:12px; border:1px solid var(--rule); border-radius:8px; padding:12px; background:var(--bg); }
+  .job-head { display:flex; justify-content:space-between; align-items:center; gap:8px; font-weight:600; }
+  .job-head .time { color:var(--muted); font-weight:400; font-variant-numeric:tabular-nums; }
+  .job ul { margin:10px 0 0; padding:0; list-style:none; max-height:240px; overflow:auto; counter-reset:step; }
+  .job li { margin:2px 0; padding-left:28px; position:relative; }
+  .job li.tool::before { counter-increment:step; content:counter(step) "."; position:absolute; left:0; width:22px; text-align:right; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .job li.note { color:var(--muted); font-style:italic; }
+  .job li.error { color:var(--bad); }
+  .result { margin-top:10px; padding:10px; border-radius:6px; white-space:pre-wrap; background:var(--card); border:1px solid var(--rule); }
+  .result.ok { border-color:var(--ok); }
+  .result.bad { border-color:var(--bad); }
+  .spin { display:inline-block; width:10px; height:10px; border:2px solid var(--accent); border-right-color:transparent; border-radius:50%; animation:spin 1s linear infinite; margin-right:6px; vertical-align:-1px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .job details { margin-top:8px; color:var(--muted); font-size:12px; }
+  pre.letter { background:var(--bg); border:1px solid var(--rule); border-radius:6px; padding:12px; white-space:pre-wrap; margin:10px 0 0; }
   iframe { width:100%; height:80vh; border:1px solid var(--rule); border-radius:6px; background:#fff; margin-top:8px; }
   .muted { color:var(--muted); }
-  @media (max-width:700px) { .hide-m { display:none; } }
+  @media (max-width:760px) { .hide-m { display:none; } }
 </style>
 </head>
 <body>
 <main>
   <h1>求职简历工作台</h1>
+  <div class="stats" id="stats"></div>
 
   <section>
     <h2>新建申请</h2>
     <input type="text" id="url" placeholder="粘贴职位链接 (https://...)">
     <textarea id="jd" placeholder="或者直接粘贴 JD 文本(链接读不了时用这个)"></textarea>
     <div class="actions" style="margin-top:8px"><button id="go">生成定制简历</button></div>
-    <pre id="log" hidden></pre>
+    <div id="applyJob"></div>
   </section>
 
   <section>
     <h2>投递看板</h2>
+    <div class="table-wrap">
     <table>
-      <thead><tr><th>公司</th><th>职位</th><th class="hide-m">地点</th><th>状态</th><th>操作</th></tr></thead>
-      <tbody id="rows"><tr><td colspan="5" class="muted">加载中…</td></tr></tbody>
+      <thead><tr><th>编号</th><th>公司</th><th>职位</th><th class="hide-m">地点</th><th>登记</th><th>投递</th><th>状态</th><th>操作</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="8" class="muted">加载中…</td></tr></tbody>
     </table>
+    </div>
   </section>
 
   <section id="viewer" hidden>
     <h2 id="vtitle"></h2>
-    <div class="actions"><button class="ghost" onclick="window.open($('pv').src)">新窗口打开 / 下载 PDF</button><button class="ghost" id="closeV">关闭</button></div>
-    <iframe name="pv" id="pv"></iframe>
-    <pre id="cl" hidden></pre>
+    <div class="actions"><button class="ghost" id="openPdf">新窗口打开 / 下载 PDF</button><button class="ghost" id="closeV">关闭</button></div>
+    <iframe id="pv"></iframe>
+    <div id="clJob"></div>
+    <pre class="letter" id="cl" hidden></pre>
   </section>
 </main>
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const post = (u, b) => fetch(u, {method:'POST', body:JSON.stringify(b||{})}).then(r => r.json());
+const GROUPS = ['准备中', '已投递 / 流程中', '已结束'];
+const mmss = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
 
 async function load() {
   const {targets, labels} = await fetch('/api/targets').then(r => r.json());
-  $('rows').innerHTML = targets.length ? targets.map(t => `
-    <tr>
+  const count = g => targets.filter(t => t.group === g).length;
+  const applied = targets.filter(t => t.group >= 1).length;
+  $('stats').innerHTML = [
+    [targets.length, '岗位总数'], [applied, '已投递(含结果)'], [count(0), '准备中'], [count(1), '流程中'], [count(2), '已结束'],
+  ].map(([n, l]) => `<div class="stat"><b>${n}</b><span>${l}</span></div>`).join('');
+  if (!targets.length) { $('rows').innerHTML = '<tr><td colspan="8" class="muted">还没有申请</td></tr>'; return; }
+  let html = '', last = -1;
+  for (const t of targets) {
+    if (t.group !== last) { last = t.group; html += `<tr class="group-head"><td colspan="8">${GROUPS[t.group]} · ${count(t.group)}</td></tr>`; }
+    const opts = labels.includes(t.progress) ? labels : [t.progress, ...labels];
+    html += `<tr>
+      <td class="num">${esc(t.id)}</td>
       <td>${esc(t.company)}</td>
       <td>${esc(t.role)}</td>
       <td class="hide-m">${esc(t.location)}</td>
-      <td><select data-slug="${t.slug}">${(labels.includes(t.progress) ? labels : [t.progress, ...labels]).map(s => `<option ${s===t.progress?'selected':''}>${esc(s)}</option>`).join('')}</select></td>
-      <td class="actions">
+      <td class="date">${esc(t.date_saved) || '—'}</td>
+      <td class="date">${esc(t.date_applied) || '—'}</td>
+      <td><select data-slug="${t.slug}">${opts.map(s => `<option ${s===t.progress?'selected':''}>${esc(s)}</option>`).join('')}</select></td>
+      <td><div class="actions">
         ${t.resume_is_html ? `<button class="ghost" data-prev="${t.slug}">简历预览</button>` : ''}
         <button class="ghost" data-cl="${t.slug}">${t.has_cover_letter ? '查看求职信' : '生成求职信'}</button>
         ${t.source_url ? `<a href="${esc(t.source_url)}" target="_blank" rel="noopener">职位页</a>` : ''}
-      </td>
-    </tr>`).join('') : '<tr><td colspan="5" class="muted">还没有申请</td></tr>';
+      </div></td>
+    </tr>`;
+  }
+  $('rows').innerHTML = html;
 }
 
-function watch(job, box, done) {
-  box.hidden = false;
+// Progress panel: readable steps while Claude works, result at the end, raw log on demand.
+function watch(job, box, title, done) {
   const tick = async () => {
     const j = await fetch('/api/jobs/' + job).then(r => r.json());
-    box.textContent = j.log || '运行中…';
-    box.scrollTop = box.scrollHeight;
-    if (j.state === 'running') return setTimeout(tick, 1500);
+    const running = j.state === 'running';
+    const icon = running ? '<span class="spin"></span>' : j.state === 'done' ? '✓ ' : '✗ ';
+    const state = running ? '进行中' : j.state === 'done' ? '已完成' : '失败';
+    const steps = (j.steps || []).map(s => `<li class="${s.kind}">${esc(s.text)}</li>`).join('');
+    const result = !running && j.result ? `<div class="result ${j.state === 'done' ? 'ok' : 'bad'}">${esc(j.result)}</div>` : '';
+    box.innerHTML = `<div class="job">
+      <div class="job-head"><span>${icon}${esc(title)} · ${state}</span><span class="time">${mmss(j.elapsed || 0)} · ${(j.steps||[]).filter(s => s.kind==='tool').length} 步</span></div>
+      ${steps ? `<ul>${steps}</ul>` : '<div class="muted" style="margin-top:8px">正在启动 Claude…</div>'}
+      ${result}
+      <details><summary>原始日志</summary><a href="/api/jobs/${job}/log" target="_blank">在新窗口查看</a></details>
+    </div>`;
+    const ul = box.querySelector('ul'); if (ul) ul.scrollTop = ul.scrollHeight;
+    if (running) return setTimeout(tick, 1500);
     done(j);
   };
   tick();
@@ -92,12 +148,13 @@ function watch(job, box, done) {
 
 $('go').onclick = async () => {
   const url = $('url').value.trim(), jd = $('jd').value.trim();
+  if (!url && !jd) return alert('请先粘贴职位链接或 JD 文本');
   $('go').disabled = true;
   const r = await post('/api/apply', {url, jd});
   if (r.error) { $('go').disabled = false; return alert(r.error); }
-  watch(r.job, $('log'), j => {
+  watch(r.job, $('applyJob'), '生成定制简历', j => {
     $('go').disabled = false;
-    if (j.log.includes('NEED_JD_TEXT')) alert('链接读不了,请把 JD 文本粘贴到下面的框里再试一次。');
+    if (j.need_jd) alert('链接读不了,请把 JD 文本粘贴到下面的框里再试一次。');
     load();
   });
 };
@@ -112,21 +169,26 @@ $('rows').onchange = async e => {
 
 $('rows').onclick = async e => {
   const prev = e.target.dataset.prev, cl = e.target.dataset.cl;
-  if (prev) { show(prev, '简历预览'); $('pv').hidden = false; $('cl').hidden = true; $('pv').src = '/preview/' + prev; }
+  if (prev) {
+    show(prev, '简历预览'); $('pv').hidden = false; $('openPdf').hidden = false; $('cl').hidden = true; $('clJob').innerHTML = '';
+    $('pv').src = '/preview/' + prev;
+  }
   if (cl) {
+    show(cl, '求职信'); $('pv').hidden = true; $('openPdf').hidden = true; $('pv').src = 'about:blank';
     const {text} = await fetch(`/api/targets/${cl}/cover-letter`).then(r => r.json());
-    show(cl, '求职信'); $('pv').hidden = true; $('cl').hidden = false;
-    if (text) return $('cl').textContent = text;
-    $('cl').textContent = '生成中…';
+    if (text) { $('clJob').innerHTML = ''; $('cl').hidden = false; return $('cl').textContent = text; }
+    $('cl').hidden = true;
     const r = await post(`/api/targets/${cl}/cover-letter`);
-    watch(r.job, $('cl'), async () => {
+    if (r.error) return alert(r.error);
+    watch(r.job, $('clJob'), '生成求职信', async () => {
       const t = await fetch(`/api/targets/${cl}/cover-letter`).then(r => r.json());
-      $('cl').textContent = t.text || '生成失败';
+      if (t.text) { $('cl').hidden = false; $('cl').textContent = t.text; }
       load();
     });
   }
 };
-function show(slug, label) { $('viewer').hidden = false; $('vtitle').textContent = `${label} · ${slug}`; $('viewer').scrollIntoView(); }
+function show(slug, label) { $('viewer').hidden = false; $('vtitle').textContent = `${label} · ${slug}`; $('viewer').scrollIntoView({behavior:'smooth'}); }
+$('openPdf').onclick = () => window.open($('pv').src);
 $('closeV').onclick = () => { $('viewer').hidden = true; $('pv').src = 'about:blank'; };
 load();
 </script>

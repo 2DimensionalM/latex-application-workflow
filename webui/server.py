@@ -10,6 +10,7 @@ import re
 import subprocess
 import sys
 import threading
+import time
 import uuid
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -41,8 +42,22 @@ def status_for(label: str, current: str) -> str:
     raise ValueError(f"unknown progress label: {label}")
 
 
+APPLIED_EVENTS = {"Applied", "已投递"}
+
+
+def applied_dates() -> dict[str, str]:
+    """Earliest 'Applied' date per internal ID, from the history table."""
+    found: dict[str, str] = {}
+    for date, _company, target, action in ws.history_rows(ROOT):
+        m = re.match(r"(\d{3})", target)
+        if m and action in APPLIED_EVENTS:
+            found[m[1]] = min(found.get(m[1], date), date)
+    return found
+
+
 def list_targets() -> list[dict]:
     status_rows = {r[0]: r for r in ws.rows(ROOT)}
+    applied = applied_dates()
     result = []
     for folder, meta in ws.packages(ROOT):
         ident = str(meta.get("internal_id"))
@@ -56,6 +71,8 @@ def list_targets() -> list[dict]:
             "status": meta.get("status"), "progress": row[6] if row else "",
             "resume": resume, "resume_is_html": resume.endswith(".html"),
             "has_cover_letter": (folder / "cover_letter.md").is_file(),
+            "date_saved": meta.get("date_saved") or "", "date_applied": applied.get(ident, ""),
+            "group": group(row[6] if row else ""),
         })
     result.sort(key=lambda t: (group(t["progress"]), t["id"]))
     return result
@@ -96,16 +113,61 @@ def set_progress(slug: str, label: str) -> None:
     meta_path.write_text(re.sub(r'^status:.*$', f'status: {json.dumps(new_status)}', meta_path.read_text(encoding="utf-8"), flags=re.M), encoding="utf-8")
 
 
+def rel(path: str) -> str:
+    try:
+        return Path(path).resolve().relative_to(ROOT).as_posix()
+    except (ValueError, OSError):
+        return path
+
+
+def describe_tool(name: str, args: dict) -> str:
+    """One readable line per tool call (paths and commands only, never file contents)."""
+    if name == "Read":
+        return f"读取 {rel(args.get('file_path', ''))}"
+    if name == "Write":
+        return f"写入 {rel(args.get('file_path', ''))}"
+    if name == "Edit":
+        return f"修改 {rel(args.get('file_path', ''))}"
+    if name == "WebFetch":
+        return f"抓取网页 {args.get('url', '')[:90]}"
+    if name == "Bash":
+        return f"运行 {args.get('command', '').splitlines()[0][:110] if args.get('command') else ''}"
+    return name
+
+
+def record_event(job: dict, event: dict) -> None:
+    kind = event.get("type")
+    if kind == "assistant":
+        for block in event.get("message", {}).get("content", []):
+            if block.get("type") == "tool_use":
+                job["steps"].append({"kind": "tool", "text": describe_tool(block.get("name", ""), block.get("input") or {})})
+            elif block.get("type") == "text" and block.get("text", "").strip():
+                job["steps"].append({"kind": "note", "text": block["text"].strip()[:300]})
+    elif kind == "user":
+        for block in event.get("message", {}).get("content", []) or []:
+            if isinstance(block, dict) and block.get("type") == "tool_result" and block.get("is_error"):
+                job["steps"].append({"kind": "error", "text": "上一步报错,Claude 会尝试处理"})
+    elif kind == "result":
+        job["result"] = event.get("result") or ""
+        job["is_error"] = bool(event.get("is_error"))
+
+
 def run_claude(job_id: str, prompt: str) -> None:
     job = JOBS[job_id]
     try:
         proc = subprocess.Popen(
-            ["claude", "-p", prompt, "--permission-mode", "acceptEdits", "--allowedTools", TOOLS],
+            ["claude", "-p", prompt, "--permission-mode", "acceptEdits", "--allowedTools", TOOLS,
+             "--output-format", "stream-json", "--verbose"],
             cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
         )
         for line in proc.stdout:
             job["log"] += line
-        job["state"] = "done" if proc.wait() == 0 else "failed"
+            try:
+                record_event(job, json.loads(line))
+            except (ValueError, AttributeError):
+                pass
+        ok = proc.wait() == 0 and not job.get("is_error")
+        job["state"] = "done" if ok else "failed"
     except OSError as exc:
         job["log"] += f"\n{exc}"
         job["state"] = "failed"
@@ -113,7 +175,7 @@ def run_claude(job_id: str, prompt: str) -> None:
 
 def start_job(prompt: str) -> str:
     job_id = uuid.uuid4().hex[:8]
-    JOBS[job_id] = {"state": "running", "log": ""}
+    JOBS[job_id] = {"state": "running", "log": "", "steps": [], "result": "", "started": time.time()}
     threading.Thread(target=run_claude, args=(job_id, prompt), daemon=True).start()
     return job_id
 
@@ -177,7 +239,12 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/targets":
                 return self.json({"targets": list_targets(), "labels": LABELS})
             if m := re.fullmatch(r"/api/jobs/(\w+)", path):
-                return self.json(JOBS.get(m[1], {"state": "unknown", "log": ""}))
+                job = JOBS.get(m[1], {"state": "unknown", "steps": [], "result": ""})
+                return self.json({k: v for k, v in job.items() if k != "log"}
+                                 | {"elapsed": int(time.time() - job.get("started", time.time())),
+                                    "need_jd": "NEED_JD_TEXT" in job.get("result", "")})
+            if m := re.fullmatch(r"/api/jobs/(\w+)/log", path):
+                return self.send(200, JOBS.get(m[1], {}).get("log", "").encode(), "text/plain")
             if m := re.fullmatch(r"/api/targets/([a-z0-9-]+)/cover-letter", path):
                 f = ROOT / "targets" / m[1] / "cover_letter.md"
                 return self.json({"text": f.read_text(encoding="utf-8") if self.known(m[1]) and f.is_file() else ""})
