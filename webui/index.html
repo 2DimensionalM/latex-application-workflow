@@ -53,6 +53,21 @@
   pre.letter { background:var(--bg); border:1px solid var(--rule); border-radius:6px; padding:12px; white-space:pre-wrap; margin:10px 0 0; }
   iframe { width:100%; height:80vh; border:1px solid var(--rule); border-radius:6px; background:#fff; margin-top:8px; }
   .muted { color:var(--muted); }
+  /* fact library */
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+  .tabs button { background:transparent; color:var(--ink); border-color:var(--rule); }
+  .tabs button.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .badge { display:inline-block; min-width:18px; padding:0 5px; margin-left:6px; border-radius:9px; font-size:11px; line-height:18px; text-align:center; background:var(--bad); color:#fff; }
+  .bar { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+  .bar .status { color:var(--muted); font-size:12px; margin-left:auto; }
+  textarea.md { width:100%; min-height:62vh; font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace; margin:0; }
+  .md-view { max-height:62vh; overflow:auto; padding:4px 12px; border:1px solid var(--rule); border-radius:6px; background:var(--bg); }
+  .md-view h1 { font-size:18px; } .md-view h2 { font-size:15px; margin:18px 0 6px; } .md-view h3 { font-size:14px; margin:14px 0 4px; }
+  .md-view table { margin:6px 0; font-size:13px; } .md-view th, .md-view td { border:1px solid var(--rule); padding:4px 8px; }
+  .md-view code { background:var(--soft); padding:1px 4px; border-radius:4px; font-size:12.5px; }
+  .md-view ul { margin:4px 0; padding-left:20px; }
+  .md-view hr { border:0; border-top:1px solid var(--rule); margin:14px 0; }
+  mark.nv { background:#f6d36b; color:#1c2430; padding:0 3px; border-radius:3px; }
   @media (max-width:760px) { .hide-m { display:none; } }
 </style>
 </head>
@@ -77,6 +92,20 @@
       <tbody id="rows"><tr><td colspan="8" class="muted">加载中…</td></tr></tbody>
     </table>
     </div>
+  </section>
+
+  <section id="facts">
+    <h2>事实库 <span class="muted" style="font-weight:400;font-size:12px">content/master/*.md · 改事实只改这里,保存后可重新生成母版简历</span></h2>
+    <div class="tabs" id="factTabs"></div>
+    <div class="bar">
+      <button class="ghost" id="factMode">编辑</button>
+      <button id="factSave" hidden>保存</button>
+      <button class="ghost" id="factRender">重新生成母版简历</button>
+      <button class="ghost" id="factPdf">查看母版 PDF</button>
+      <span class="status" id="factStatus"></span>
+    </div>
+    <div class="md-view" id="factView"></div>
+    <textarea class="md" id="factEdit" spellcheck="false" hidden></textarea>
   </section>
 
   <section id="viewer" hidden>
@@ -191,6 +220,92 @@ function show(slug, label) { $('viewer').hidden = false; $('vtitle').textContent
 $('openPdf').onclick = () => window.open($('pv').src);
 $('closeV').onclick = () => { $('viewer').hidden = true; $('pv').src = 'about:blank'; };
 load();
+
+// ---- fact library ----
+const fact = {name: null, sha: '', saved: '', draft: '', editing: false};
+const NAMES = {profile:'个人概况', education:'教育', experience:'经历', projects:'项目', skills:'技能', certifications:'证书'};
+function inline(t) {
+  return esc(t).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+    .replace(/\*([^*]+)\*/g, '<i>$1</i>').replace(/Need verification/g, '<mark class="nv">Need verification</mark>');
+}
+function mdToHtml(md) {
+  const out = []; const lines = md.split('\n'); let i = 0;
+  while (i < lines.length) {
+    const l = lines[i];
+    if (/^#{1,4} /.test(l)) { const n = l.match(/^#+/)[0].length; out.push(`<h${n}>${inline(l.slice(n + 1))}</h${n}>`); i++; continue; }
+    if (/^---+\s*$/.test(l)) { out.push('<hr>'); i++; continue; }
+    if (l.startsWith('|')) {
+      const rows = []; while (i < lines.length && lines[i].startsWith('|')) rows.push(lines[i++]);
+      const cells = r => r.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+      const body = rows.filter(r => !/^\|\s*-/.test(r));
+      out.push('<table>' + body.map((r, k) => '<tr>' + cells(r).map(c => k ? `<td>${inline(c)}</td>` : `<th>${inline(c)}</th>`).join('') + '</tr>').join('') + '</table>');
+      continue;
+    }
+    if (/^\s*- /.test(l)) {
+      let html = '', depth = -1;
+      while (i < lines.length && /^\s*- /.test(lines[i])) {
+        const d = Math.floor(lines[i].match(/^\s*/)[0].length / 2);
+        while (depth < d) { html += '<ul>'; depth++; }
+        while (depth > d) { html += '</ul>'; depth--; }
+        html += `<li>${inline(lines[i].replace(/^\s*- /, ''))}</li>`; i++;
+      }
+      while (depth-- >= 0) html += '</ul>';
+      out.push(html); continue;
+    }
+    if (l.trim()) out.push(`<p>${inline(l)}</p>`);
+    i++;
+  }
+  return out.join('\n');
+}
+const sync = () => { if (fact.editing) fact.draft = $('factEdit').value; };
+const dirty = () => { sync(); return fact.name && fact.draft !== fact.saved; };
+async function factTabs() {
+  const {files} = await fetch('/api/master').then(r => r.json());
+  $('factTabs').innerHTML = files.map(f => `<button data-f="${f.name}" class="${f.name === fact.name ? 'on' : ''}">${NAMES[f.name] || f.name}${f.need_verification ? `<span class="badge" title="Need verification">${f.need_verification}</span>` : ''}</button>`).join('');
+  return files;
+}
+function status() {
+  $('factStatus').textContent = `${fact.name}.md` + (dirty() ? ' · 有未保存的修改' : '');
+  $('factSave').hidden = !dirty();
+}
+async function openFact(name) {
+  if (dirty() && !confirm('当前文件有未保存的修改,放弃并切换?')) return;
+  const f = await fetch('/api/master/' + name).then(r => r.json());
+  Object.assign(fact, {name, sha: f.sha, saved: f.text, draft: f.text});
+  setMode(false); factTabs(); status();
+}
+function setMode(editing) {
+  sync(); fact.editing = editing;
+  $('factView').hidden = editing; $('factEdit').hidden = !editing;
+  $('factMode').textContent = editing ? '预览' : '编辑';
+  if (editing) { $('factEdit').value = fact.draft; $('factEdit').focus(); } else $('factView').innerHTML = mdToHtml(fact.draft);
+}
+$('factTabs').onclick = e => { const b = e.target.closest('button'); if (b) openFact(b.dataset.f); };
+$('factMode').onclick = () => setMode(!fact.editing);
+$('factEdit').oninput = status;
+$('factSave').onclick = async () => {
+  sync();
+  const r = await post('/api/master/' + fact.name, {text: fact.draft, sha: fact.sha});
+  if (r.error) return alert(r.error);
+  Object.assign(fact, {sha: r.sha, saved: fact.draft}); setMode(false); factTabs(); status();
+  $('factStatus').textContent += ` · 已保存 ${new Date().toLocaleTimeString()}(旧版本备份在 content/master/.history/)`;
+};
+$('factRender').onclick = async () => {
+  if (dirty() && !confirm('当前修改还没保存,生成会用已保存的版本。继续?')) return;
+  $('factRender').disabled = true; $('factStatus').textContent = '正在生成母版简历…';
+  const r = await post('/api/master/render');
+  $('factRender').disabled = false;
+  if (r.error) { $('factStatus').textContent = ''; return alert(r.error); }
+  const fill = r.body_end_fraction ? Math.round(r.body_end_fraction * 100) + '%' : '—';
+  $('factStatus').textContent = (r.errors && r.errors.length ? '⚠ ' + r.errors.join('; ') : `✓ 母版已更新:${r.pages} 页,内容到页面 ${fill}`)
+    + (r.warnings && r.warnings.length ? ' · ' + r.warnings.join('; ') : '');
+};
+$('factPdf').onclick = () => {
+  show('master', '母版简历'); $('pv').hidden = false; $('openPdf').hidden = false; $('cl').hidden = true; $('clJob').innerHTML = '';
+  $('pv').src = '/preview/master?t=' + Date.now();
+};
+window.addEventListener('beforeunload', e => { if (dirty()) { e.preventDefault(); e.returnValue = ''; } });
+factTabs().then(files => files.length && openFact(files[0].name));
 </script>
 </body>
 </html>

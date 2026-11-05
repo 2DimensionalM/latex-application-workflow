@@ -2,7 +2,10 @@
 """Local web UI over the workspace harness. Binds to 127.0.0.1 only. Run with .venv/bin/python."""
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
+import hashlib
+import io
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -16,6 +19,7 @@ import uuid
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 import workspace as ws  # noqa: E402
+import render_html  # noqa: E402
 
 HOST, PORT = "127.0.0.1", 8765
 LABELS = [
@@ -40,6 +44,51 @@ def status_for(label: str, current: str) -> str:
         if label in ws.STATUS[name]:
             return name
     raise ValueError(f"unknown progress label: {label}")
+
+
+MASTER_DIR = ROOT / "content/master"
+MASTER_FILES = ["profile", "education", "experience", "projects", "skills", "certifications"]
+MASTER_REC = {**ws.record("versions/cv/targeted/000-resume-master.html", []),
+              "entry": "content/master/resume.html", "jobname": "master-from-md"}
+
+
+def sha(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+
+
+def master_list() -> list[dict]:
+    out = []
+    for name in MASTER_FILES:
+        f = MASTER_DIR / f"{name}.md"
+        text = f.read_text(encoding="utf-8") if f.is_file() else ""
+        out.append({"name": name, "exists": f.is_file(), "sha": sha(text),
+                    "need_verification": text.count("Need verification"),
+                    "updated": dt.datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%d %H:%M") if f.is_file() else ""})
+    return out
+
+
+def master_save(name: str, text: str, base_sha: str) -> str:
+    """Save one fact file; refuse if it changed since the editor loaded it. Keeps a timestamped backup."""
+    f = MASTER_DIR / f"{name}.md"
+    current = f.read_text(encoding="utf-8") if f.is_file() else ""
+    if base_sha != sha(current):
+        raise PermissionError("文件在你打开后被改过,请重新加载再保存")
+    if f.is_file():
+        history = MASTER_DIR / ".history"
+        history.mkdir(exist_ok=True)
+        (history / f"{name}.{dt.datetime.now():%Y%m%d-%H%M%S}.md").write_text(current, encoding="utf-8")
+    text = text.replace("\r\n", "\n")
+    f.write_text(text if text.endswith("\n") else text + "\n", encoding="utf-8")
+    return sha(f.read_text(encoding="utf-8"))
+
+
+def master_render() -> dict:
+    """Regenerate content/master/resume.html from the fact files and run the one-page QA."""
+    (MASTER_DIR / "resume.html").write_text(render_html.render(ROOT), encoding="utf-8")
+    with contextlib.redirect_stdout(io.StringIO()):
+        ws.build_html(ROOT, MASTER_REC)
+    report = json.loads((ROOT / "output/review/master-from-md/qa.json").read_text(encoding="utf-8"))
+    return {k: report.get(k) for k in ("pages", "body_end_fraction", "errors", "warnings")}
 
 
 APPLIED_EVENTS = {"Applied", "已投递"}
@@ -248,6 +297,19 @@ class Handler(BaseHTTPRequestHandler):
             if m := re.fullmatch(r"/api/targets/([a-z0-9-]+)/cover-letter", path):
                 f = ROOT / "targets" / m[1] / "cover_letter.md"
                 return self.json({"text": f.read_text(encoding="utf-8") if self.known(m[1]) and f.is_file() else ""})
+            if path == "/api/master":
+                return self.json({"files": master_list()})
+            if m := re.fullmatch(r"/api/master/([a-z]+)", path):
+                if m[1] not in MASTER_FILES:
+                    return self.json({"error": "unknown file"}, 404)
+                f = MASTER_DIR / f"{m[1]}.md"
+                text = f.read_text(encoding="utf-8") if f.is_file() else ""
+                return self.json({"name": m[1], "text": text, "sha": sha(text)})
+            if path == "/preview/master":
+                pdf = ROOT / "output/review/master-from-md/master-from-md.pdf"
+                if not pdf.is_file():
+                    master_render()
+                return self.send(200, pdf.read_bytes(), "application/pdf")
             if m := re.fullmatch(r"/preview/([a-z0-9-]+)", path):
                 meta = self.known(m[1])
                 entry = (meta or {}).get("resume_version") or ""
@@ -275,6 +337,18 @@ class Handler(BaseHTTPRequestHandler):
             return self.json({"error": "forbidden"}, 403)
         data = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
         try:
+            if self.path == "/api/master/render":
+                with LOCK:
+                    return self.json(master_render())
+            if m := re.fullmatch(r"/api/master/([a-z]+)", self.path):
+                text = data.get("text")
+                if m[1] not in MASTER_FILES or not isinstance(text, str) or len(text) > 300_000:
+                    return self.json({"error": "bad request"}, 400)
+                try:
+                    with LOCK:
+                        return self.json({"sha": master_save(m[1], text, data.get("sha", ""))})
+                except PermissionError as exc:
+                    return self.json({"error": str(exc)}, 409)
             if self.path == "/api/apply":
                 url, jd = (data.get("url") or "").strip(), (data.get("jd") or "").strip()
                 if not (re.fullmatch(r"https://[^\s]+", url) or jd):
