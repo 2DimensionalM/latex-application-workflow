@@ -1,123 +1,194 @@
-# LaTeX Application Workflow
+# Application Workflow（`feature/html-engine-webui` 分支）
 
-一套**隐私优先（Privacy-First）、跨 Agent 通用（`.agent/` + `AGENTS.md` + `CLAUDE.md`）、自动化 Harness 驱动**的 LaTeX 英文简历与求职信（CV & Cover Letter）工程化工作流。
+一套**隐私优先、Agent 驱动**的求职材料工作流：用一份结构化的个人事实库，按岗位生成**一页英文简历**，自动做版面质检，并在一个**本地网页工作台**里管理投递进度。
 
-本项目将**候选人事实资产（`content/master/`）**、**唯一跨市场通用基线（`baseline-universal.tex`）**、**单岗预写决策（`targets/<slug>/tailoring.md`）**与**定向 LaTeX 编译及 PDF 视觉/版面自动 QA（`scripts/workspace.py`）**解耦，并将从「岗位链接进项目」到「发布投递与状态追踪」的每一步沉淀为跨工具通用的 `.agent/skills/` 与 `.agent/rules/`，支持 Claude Code、Codex、Cursor、OpenCode 等任意 Agent 及用户 Fork 后直接上手与扩展。
+这个分支在原有的 LaTeX 工作流之上，增加了两样东西：
+
+1. **HTML 简历引擎**：事实库 `content/master/*.md` → HTML 母版简历 → 每个岗位一份定制 HTML 简历 → 用无头 Chrome 转成 PDF，并沿用原来的 PDF 质检（必须一页、内容填满 ≥80% 页高）。不需要安装 LaTeX。
+2. **本地网页工作台 `webui/`**：投递看板、事实库编辑、简历预览，以及在网页里直接调用 Claude Code（`claude -p`）完成"贴链接 → 生成定制简历 / 求职信"。
+
+原来的 LaTeX 路径（`src/*.tex`、`versions/**/*.tex`、`./scripts/build.sh baseline` 等）完全保留，两条路径共用同一套编号、状态表和质检规则。
 
 ---
 
-## 一、快速上手（Fork 后 3 步初始化）
+## 一、整体逻辑：五层数据流
+
+```
+① 事实库（唯一事实来源，本地私有）
+   content/master/{profile,education,experience,projects,skills,certifications}.md
+   + src/sections/header.private.tex（姓名与联系方式）
+        │  scripts/render_html.py（套用 src/html/resume.template.html 版式）
+        ▼
+② HTML 母版简历（本地私有，自动生成，不要手改）
+   content/master/resume.html
+        │
+        │  ③ 岗位登记：workspace.py init → targets/<slug>/{metadata.yaml, jd.md, notes.md, tailoring.md}
+        │     并在 PROJECT_STATUS.md 新增一行（三位编号 001、002…，只增不回收）
+        ▼
+④ 定制简历（本地私有，每个岗位一份）
+   versions/cv/targeted/{id}-resume-<company>-<role>-<location>.html
+   只允许对母版里已有的事实做挑选、排序、改写，不能新增事实
+        │  workspace.py build resume:<id>（无头 Chrome → PDF → 一页/留白质检）
+        ▼
+⑤ 审阅与发布
+   output/review/<JOBNAME>/{<JOBNAME>.pdf, qa.json}      ← 每次构建，可反复覆盖
+   output/cv/targeted/<JOBNAME>.pdf                       ← --publish 正式快照，防覆盖
+```
+
+几条核心原则（详见 `AGENTS.md` 与 `.agent/rules/`）：
+
+- **事实只改一处**：经历、项目、技能等一律改 `content/master/*.md`，再重新生成母版。不要直接改 `resume.html`。
+- **不编造**：定制简历和求职信只能使用事实库里已有的内容；事实库里标了 `Need verification` 的内容，核实前不得写进对外材料。
+- **投递过的版本不被覆盖**：母版更新不会改动已有的定制简历；`--publish` 拒绝覆盖已存在的快照。
+- **状态只记真实事件**：`PROJECT_STATUS.md` 的历史表只记录投递、面试、结果等真实发生的事，不记录"写了简历""编译了 PDF"。
+
+---
+
+## 二、快速上手
 
 ### 环境要求
-- Python 3.10+
-- TeX Live 或 TinyTeX（提供 `pdflatex`）
-- Poppler（推荐，提供 `pdftoppm` 供 Agent 渲染 PDF 页面进行目视 QA）
 
-### 初始化命令
+| 依赖 | 用途 | 是否必需 |
+|---|---|---|
+| Python 3.10+ | 脚本与网页服务 | 必需 |
+| Google Chrome | HTML → PDF 渲染与质检 | HTML 路径必需（也可用 `CHROME_BIN` 指定 Chromium） |
+| [Claude Code](https://claude.com/claude-code) CLI（`claude`，已登录） | 网页里的"生成定制简历""生成求职信" | 只在用 AI 功能时需要 |
+| TeX Live / TinyTeX（`pdflatex`） | 原 LaTeX 路径 | 只走 HTML 路径可以不装 |
+
+### 初始化
 
 ```bash
-# 1. 创建虚拟环境并安装校验/QA依赖（PyYAML, pdfplumber）
+# 1. 虚拟环境与依赖（PyYAML、pdfplumber）
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 
-# 2. 一键生成本地私有文件（从 *.example.md 生成 content/master/*.md，并生成 src/sections/header.private.tex）
+# 2. 从模板生成本地私有文件：content/master/*.md 与 src/sections/header.private.tex（已存在的不会覆盖）
 .venv/bin/python scripts/workspace.py bootstrap
 
-# 3. 校验工作区一致性并编译通用 CV 基线与五段式求职信模板
+# 3. 填写你自己的事实与联系方式（这些文件被 .gitignore 忽略）
+#    content/master/*.md            参照同目录 *.example.md 的结构
+#    src/sections/header.private.tex  姓名、城市、邮箱、电话、GitHub
+
+# 4. 生成 HTML 母版简历，并检查工作区
+.venv/bin/python scripts/render_html.py
 .venv/bin/python scripts/workspace.py check
-./scripts/build.sh baseline
-./scripts/build.sh letter-placeholder
+
+# 5. 启动网页工作台，打开 http://127.0.0.1:8765
+.venv/bin/python webui/server.py
 ```
 
-- 构建默认输出至隔离目录 `output/review/<JOBNAME>/`（包含 `<JOBNAME>.pdf`、`build.log`、`latex.log` 与自动版面检测报告 `qa.json`）。
-- 编辑 `src/sections/header.private.tex` 填入真实姓名与联系方式（该文件已被 `.gitignore` 忽略且禁止 Agent 读取）。
-- 编辑 `content/master/*.md` 填入你的真实教育、经历、项目、技能与证书事实（同样被 `.gitignore` 忽略，永不上传）。
+> 启动时报 `Address already in use`：说明已有一个服务占着 8765 端口，先关掉它（在它的终端按 Ctrl+C）。改了 `webui/` 或 `scripts/` 的代码后，需要重启服务才会生效。
 
----
+### 事实库文件怎么写
 
-## 二、Agentic Workflow 全流程与标准化 Skills (`.agent/skills/`)
+`render_html.py` 按固定字段解析 md，字段名要和 `*.example.md` 保持一致。常用约定：
 
-本仓库在 `.agent/skills/` 下沉淀了 **6 个标准化阶段技能**，通过根入口 `AGENTS.md`（以及 `CLAUDE.md` 和 `.cursor/rules/project-memory.mdc` 路由壳）实现按需加载：
-
-```
-[Stage 0: 母版与通用基线维护]  (.agent/skills/master-and-baseline/SKILL.md)
-   content/master/*.md (唯一事实源 SoT) ──(显式刷新)──► src/sections/baseline-universal.tex (唯一一页父本)
-          │
-          ▼
-[Stage 1: 岗位链接/JD进项目]   (.agent/skills/job-intake/SKILL.md)
-   `workspace.py init` 分配三位编号 001..999 ──► 建立 targets/<slug>/{metadata.yaml, jd.md, notes.md, tailoring.md}
-   并同步 PROJECT_STATUS.md 主表新行（进展 = 待预写）
-          │
-          ▼
-[Stage 2: 岗位预写与证据映射]  (.agent/skills/job-prewrite/SKILL.md)
-   对照 jd.md + notes.md + content/master/ ──► 撰写 targets/<slug>/tailoring.md 六大模块（严禁跳过预写直接改 LaTeX）
-          │
-          ├───────────────────────────────────────────────────┐
-          ▼                                                   ▼
-[Stage 3: 定向简历制作与 QA]                                [Stage 4: 定向求职信制作与 QA]
-(.agent/skills/targeted-resume/SKILL.md)                   (.agent/skills/targeted-cover-letter/SKILL.md)
- - 从 baseline-universal.tex 分叉                           - 基于 tailoring.md 五段提纲创建信件正文
- - 严格保持 Experience 时间倒序                              - 拒绝“简历散文复述”，强制包含第 4 段前瞻切入计划
- - `./scripts/build.sh resume:<id>`                        - `./scripts/build.sh letter:<id>`
- - 强制单页 + 正文底端 ≥80% 页高（留白自动回补闭环）          - 强制单页 + 正文底端 ≥60% 页高实测闭环
-          │                                                   │
-          └─────────────────────────┬─────────────────────────┘
-                                    ▼
-[Stage 5: 成品发布与状态追踪]  (.agent/skills/status-and-publish/SKILL.md)
-   `./scripts/build.sh <target> --publish` 发布防覆盖快照 ──► 更新 PROJECT_STATUS.md 产物链接、分组行序与历史动作时间线
-```
-
-| 阶段 | Skill 路径 | 触发场景示例 | 核心产出与门禁 |
-|---|---|---|---|
-| **0. 母版与基线** | [`.agent/skills/master-and-baseline/SKILL.md`](.agent/skills/master-and-baseline/SKILL.md) | “初始化项目”、“把这段新实习加进 master”、“刷新通用 baseline” | 更新 `content/master/*.md` 或 `baseline-universal.tex` |
-| **1. 链接进项目** | [`.agent/skills/job-intake/SKILL.md`](.agent/skills/job-intake/SKILL.md) | “把这个招聘链接进项目”、“登记这三条岗位 URL” | 分配 `internal_id`、生成结构化英文 `jd.md` 与 `notes.md`、更新 `PROJECT_STATUS.md` |
-| **2. 岗位预写** | [`.agent/skills/job-prewrite/SKILL.md`](.agent/skills/job-prewrite/SKILL.md) | “帮我预写 001 岗位”、“做 001 的 tailoring 规划” | 完成 `targets/<slug>/tailoring.md` 六大模块映射 |
-| **3. 定向简历** | [`.agent/skills/targeted-resume/SKILL.md`](.agent/skills/targeted-resume/SKILL.md) | “写 001 的定向简历”、“编译并检查 001 简历留白” | 生成 `{id}-resume-....tex`、通过 1 页 + ≥80% 页面填充度 QA |
-| **4. 定向求职信** | [`.agent/skills/targeted-cover-letter/SKILL.md`](.agent/skills/targeted-cover-letter/SKILL.md) | “写 001 的求职信 / cover letter” | 生成 `{id}-cover-letter-....tex`、五段式结构、通过 ≥60% 正文高度 QA |
-| **5. 发布与状态** | [`.agent/skills/status-and-publish/SKILL.md`](.agent/skills/status-and-publish/SKILL.md) | “发布 001 的 PDF”、“001 已投递 / 收到一面 / 已拒” | `--publish` 写入正式目录、更新 `PROJECT_STATUS.md` 分组排序与历史表 |
-
----
-
-## 三、跨工具通用 Context Architecture (`.agent/` + `AGENTS.md` + `CLAUDE.md`)
-
-所有长期记忆、领域规则与技能统一采用纯 Markdown 维护在 **`.agent/`** 下，不依赖任何特定编辑器的私有格式：
-
-| 文档路径 | 职责说明 |
+| 写法 | 作用 |
 |---|---|
-| [`AGENTS.md`](AGENTS.md) | 跨工具通用根入口：核心安全红线、Git 提交策略与 6 阶段任务路由表 |
-| [`CLAUDE.md`](CLAUDE.md) | Claude Code 入口路由，指向 `AGENTS.md` 与 `.agent/` |
-| [`.cursor/rules/project-memory.mdc`](.cursor/rules/project-memory.mdc) | Cursor 薄路由壳（仅指向 `AGENTS.md` 与 `.agent/`，不存储长期记忆） |
-| [`.agent/README.md`](.agent/README.md) | `.agent/` 上下文架构总览（多 Agent 路由图、Skills 与 Rules 索引） |
-| [`.agent/rules/general.md`](.agent/rules/general.md) | 核心工程原则、四层信息归属与长期记忆更新策略 |
-| [`.agent/rules/intake.md`](.agent/rules/intake.md) | 招聘 URL 抓取、ATS 解析技巧、开放状态交叉验证与非英语 JD 翻译规范 |
-| [`.agent/rules/tailoring.md`](.agent/rules/tailoring.md) | 定制六步顺序与 `tailoring.md` 六大模块标准 |
-| [`.agent/rules/content.md`](.agent/rules/content.md) | 母版事实记录规范、简历单页压缩与留白回补闭环、求职信五段结构与 ≥60% 高度铁律 |
-| [`.agent/rules/status.md`](.agent/rules/status.md) | `PROJECT_STATUS.md` 9 列总表、3 级状态分组移动规则与 4 列历史表规范 |
-| [`.agent/rules/structure.md`](.agent/rules/structure.md) | LaTeX 宏与三层分离架构（`src/` vs `versions/`） |
-| [`.agent/rules/build.md`](.agent/rules/build.md) | 隔离构建、自动 PDF/Log QA 与快照防覆盖发布机制 |
-| [`STRUCTURE.md`](STRUCTURE.md) | 目录职责、五层数据流与文件命名/编号不变量 |
-| [`RESUME_BASELINE.md`](RESUME_BASELINE.md) | 唯一跨市场 CV 基线的定义、刷新边界与分叉规范 |
-| [`PROJECT_STATUS.md`](PROJECT_STATUS.md) | 标准化的 9 列岗位总表 + 4 列带日期历史动作时间线 |
-| [`content/master/README.md`](content/master/README.md) | 候选人事实库（SoT）维护规范与 6 个 `*.example.md` 模板说明 |
-| [`targets/README.md`](targets/README.md) | 岗位目标包四件套契约与 `metadata.yaml` Schema |
-| [`scripts/README.md`](scripts/README.md) | `workspace.py`、`build.sh`、`build_all.py`、`privacy_check.py` 完整命令手册 |
+| `## 1. 公司 — 职位` | 一段经历或一个项目的标题 |
+| `- **Dates:** Mar 2025 – Sep 2025` | 经历日期（同年会自动缩写成 `Mar – Sep 2025`） |
+| `- **Context & Dates:** … (Jul 2025)` | 项目日期，括号里的日期优先 |
+| `- **CV Title:** …` | 母版简历上显示的职位名（有多个写法时指定一个） |
+| `- **Reusable Candidate Bullets:**` 下的 `` - `…` `` | 放进简历的 bullet |
+| `- **On baseline CV:** no` | 只留在事实库，不放进母版简历（用来控制一页） |
+| `Need verification` | 待核实标记，网页里会高亮并计数 |
+| `skills.md` 里的表格 | 每个 `##` 小节是一组技能，第一列是显示在简历上的文字 |
 
 ---
 
-## 四、隐私安全模型（Privacy by Design）
+## 三、网页工作台（`webui/`）
 
-1. **私有文件默认隔离**：
-   - `src/sections/header.private.tex`（真实姓名、地址、电话、邮箱、个人主页链接）
-   - `content/master/*.md`（真实个人履历事实库，仅跟踪 `README.md` 与 `*.example.md`）
-   - `targets/<slug>/`（真实申请岗位包，仅跟踪 `targets/example-company-role/`）
-   - `versions/cv/targeted/*.tex`、`src/sections/targeted-*.tex`、`src/sections/letters/targeted-*.tex`
-   - `output/**`（所有编译生成的 PDF 与日志）
-   - 本地特定目录（如 `cn-campus-2027/`、`_inbox/`、`nuffic/`）
-2. **提交前强制门禁**：
-   每次 `git commit` / `git push` 前运行：
-   ```bash
-   .venv/bin/python scripts/privacy_check.py
-   .venv/bin/python scripts/workspace.py check
-   .venv/bin/python -m unittest discover -s scripts/tests -v
-   ```
-   `privacy_check.py` 会扫描所有已跟踪和已暂存文件，一旦发现被禁止的私有路径、二进制/PDF 文件、邮箱地址、电话号码或密钥即刻报错阻断。
+只监听 `127.0.0.1`，会拒绝来自其他网站的请求。
+
+| 区块 | 功能 |
+|---|---|
+| 统计卡片 | 岗位总数、已投递、准备中、流程中、已结束 |
+| 新建申请 | 粘贴职位链接或 JD 文本 → 后台运行 `claude -p`，按 `.agent/skills/` 的阶段流程登记岗位、预写、生成定制 HTML 简历并质检。页面逐步显示 Claude 在做什么（读取、抓取、写入、构建），最后单独显示结果；原始日志折叠在"原始日志"里 |
+| 投递看板 | 编号、公司、职位、地点、登记日期、投递日期，按"准备中 / 已投递·流程中 / 已结束"分组。改"状态"会同步 `metadata.yaml` 与 `PROJECT_STATUS.md`（移动到对应分组；只有投递及之后的状态写入历史表） |
+| 简历预览 | 生成并显示该岗位的 PDF。预览使用系统字体以提速，源文件没变时直接复用上次的 PDF；`--publish` 正式发布时才加载网页字体 |
+| 求职信 | 调用 `claude -p` 按五段式规则起草，保存为 `targets/<slug>/cover_letter.md`（纯文本草稿，不走 LaTeX 构建） |
+| 事实库 | 查看和编辑 6 个 `content/master/*.md`：预览 / 编辑切换，保存前检查文件是否被别处改过，旧版本自动备份到 `content/master/.history/`；一键"重新生成母版简历"并显示质检结果；查看母版 PDF |
+
+网页不会显示 `src/sections/header.private.tex`。
+
+---
+
+## 四、命令速查
+
+| 命令 | 作用 |
+|---|---|
+| `.venv/bin/python scripts/render_html.py` | 由事实库生成 `content/master/resume.html` |
+| `.venv/bin/python scripts/workspace.py init --url … --slug … --company … --role … --location … --write` | 登记岗位（不加 `--write` 只预览） |
+| `.venv/bin/python scripts/workspace.py list` | 列出所有构建目标 |
+| `.venv/bin/python scripts/workspace.py build resume:<id>` | 构建某岗位的简历（`.html` 入口走 Chrome，`.tex` 入口走 LaTeX） |
+| `.venv/bin/python scripts/workspace.py build resume:<id> --publish` | 质检通过后发布防覆盖快照 |
+| `.venv/bin/python scripts/workspace.py check` | 校验 `metadata.yaml`、`PROJECT_STATUS.md`、构建入口的一致性 |
+| `.venv/bin/python scripts/privacy_check.py` | 扫描已跟踪文件中的私有路径、邮箱、电话、密钥 |
+| `.venv/bin/python -m unittest discover -s scripts/tests -v` | 回归测试 |
+| `CV_ONLINE_FONTS=1 .venv/bin/python webui/server.py` | 预览也加载网页字体（更接近设计稿，但更慢） |
+
+更多 LaTeX 路径的命令见 [`scripts/README.md`](scripts/README.md)。
+
+---
+
+## 五、这个分支新增或改动的文件
+
+| 路径 | 说明 |
+|---|---|
+| [`scripts/render_html.py`](scripts/render_html.py) | 事实库 → HTML 母版简历的生成器（只打印输出路径，不打印内容） |
+| [`src/html/resume.template.html`](src/html/resume.template.html) | HTML 简历版式模板（只有样式与结构，不含个人内容） |
+| [`scripts/workspace.py`](scripts/workspace.py) | 新增 `.html` 构建入口：无头 Chrome 渲染、预览缓存、复用原 PDF 质检与防覆盖发布 |
+| [`webui/server.py`](webui/server.py)、[`webui/index.html`](webui/index.html) | 本地网页工作台 |
+| [`.agent/skills/targeted-resume-html/SKILL.md`](.agent/skills/targeted-resume-html/SKILL.md) | HTML 定制简历的阶段技能（替代 `targeted-resume` 的 LaTeX 步骤） |
+| [`.agent/rules/webui.md`](.agent/rules/webui.md) | 网页工作台的行为与安全边界 |
+| `.gitignore` | 新增忽略 `versions/cv/targeted/*.html`、`versions/letter/targeted/*.html` |
+
+---
+
+## 六、Agent 工作流（`.agent/skills/`）
+
+`AGENTS.md`（以及 `CLAUDE.md`、`.cursor/rules/project-memory.mdc`）是所有 Agent 的入口，按任务阶段路由到对应技能与规则：
+
+| 阶段 | Skill | 触发示例 | 产出与门禁 |
+|---|---|---|---|
+| 0. 母版与基线 | [`master-and-baseline`](.agent/skills/master-and-baseline/SKILL.md) | "把这段新实习加进 master" | 更新 `content/master/*.md` |
+| 1. 岗位登记 | [`job-intake`](.agent/skills/job-intake/SKILL.md) | "把这个招聘链接进项目" | 分配编号，写英文 `jd.md` 与 `notes.md`，更新 `PROJECT_STATUS.md` |
+| 2. 岗位预写 | [`job-prewrite`](.agent/skills/job-prewrite/SKILL.md) | "帮我预写 001" | `tailoring.md` 六大模块（含诚实缺口） |
+| 3. 定制简历（LaTeX） | [`targeted-resume`](.agent/skills/targeted-resume/SKILL.md) | "写 001 的简历" | `.tex` 入口，1 页 + ≥80% 填充 |
+| 3b. 定制简历（HTML） | [`targeted-resume-html`](.agent/skills/targeted-resume-html/SKILL.md) | 母版为 HTML 时 | `.html` 入口，同样的质检 |
+| 4. 求职信 | [`targeted-cover-letter`](.agent/skills/targeted-cover-letter/SKILL.md) | "写 001 的求职信" | 五段式，≥60% 正文高度 |
+| 5. 发布与状态 | [`status-and-publish`](.agent/skills/status-and-publish/SKILL.md) | "001 已投递 / 收到一面" | `--publish` 快照，更新状态表与历史表 |
+
+规则文档（按需加载）：[`general`](.agent/rules/general.md)、[`intake`](.agent/rules/intake.md)、[`tailoring`](.agent/rules/tailoring.md)、[`content`](.agent/rules/content.md)、[`status`](.agent/rules/status.md)、[`structure`](.agent/rules/structure.md)、[`build`](.agent/rules/build.md)、[`webui`](.agent/rules/webui.md)。目录职责与命名规则见 [`STRUCTURE.md`](STRUCTURE.md)。
+
+---
+
+## 七、隐私模型
+
+以下内容被 `.gitignore` 忽略，**永远不应提交**：
+
+- `content/master/*`（事实库、生成的 `resume.html`、`.history/` 备份；只跟踪 `README.md` 与 `*.example.md`）
+- `src/sections/header.private.tex`（真实联系方式）
+- `targets/<slug>/`（真实岗位包；只跟踪 `targets/example-company-role/`）
+- `versions/cv/targeted/*.{tex,html}`、`versions/letter/targeted/*.{tex,html}`、`src/sections/targeted-*.tex` 等定制稿
+- `output/**`（所有 PDF 与日志）
+
+**特别注意 `PROJECT_STATUS.md`**：它是被 Git 跟踪的文件（仓库里只放空白表头），但你本地使用时会写入真实岗位记录。提交时请**不要勾选它**。如果不小心提交并推送了，需要从分支历史里移除，单纯再提交一次删除并不能清掉历史里的内容。
+
+提交或推送前建议运行：
+
+```bash
+.venv/bin/python scripts/privacy_check.py
+.venv/bin/python scripts/workspace.py check
+.venv/bin/python -m unittest discover -s scripts/tests -v
+```
+
+---
+
+## 八、已知限制
+
+- `test_live_repository_checks_and_manifest` 假定仓库里没有真实岗位；本地登记了岗位后这条测试会失败，在干净克隆里是通过的。
+- `privacy_check.py` 会把链接里较长的数字（如 LinkedIn 职位编号）误报为电话号码。
+- 预览使用系统字体，字形与设计稿略有不同；正式发布时使用网页字体。
+- 网页里生成的求职信是 Markdown 草稿，不经过 LaTeX 版面质检。
+- 本分支基于较早的 `main`，与最新 `main`（文档英文化、MIT 许可证）尚未合并。
