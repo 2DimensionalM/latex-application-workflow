@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -533,28 +534,50 @@ def chrome_binary() -> str:
     return found
 
 
+WEB_FONT_LINKS = re.compile(r"<link[^>]+fonts\.(?:googleapis|gstatic)\.com[^>]*>", re.I)
+
+
 def build_html(root: Path, rec: dict, publish: bool = False) -> int:
-    """Render an HTML resume to PDF with headless Chrome, then run the same PDF QA."""
+    """Render an HTML resume to PDF with headless Chrome, then run the same PDF QA.
+
+    Review builds skip web fonts (system fonts, fast) and reuse the last PDF while the
+    source is unchanged. Publish builds load the web fonts so the snapshot keeps the design.
+    """
     review = root / "output/review" / rec["jobname"]
     review.mkdir(parents=True, exist_ok=True)
     destination = root / rec["pdf"] if publish else review / (rec["jobname"] + ".pdf")
     if publish and destination.exists():
         raise ValueError("refusing to overwrite an existing PDF snapshot; use review build")
-    for name in (rec["jobname"] + ".pdf", "qa.json", "latex.log"):
-        (review / name).unlink(missing_ok=True)
     source = (root / rec["entry"]).resolve()
     review_pdf = review / (rec["jobname"] + ".pdf")
+    online_fonts = publish or os.environ.get("CV_ONLINE_FONTS") == "1"
+    html_text = source.read_text(encoding="utf-8")
+    digest = hashlib.sha256(
+        (("online" if online_fonts else "offline") + html_text).encode("utf-8")
+    ).hexdigest()
+    qa_path = review / "qa.json"
+    if not publish and review_pdf.is_file() and qa_path.is_file():
+        cached = json.loads(qa_path.read_text(encoding="utf-8"))
+        if cached.get("source_sha") == digest:
+            print(json.dumps(cached, indent=2))
+            return 1 if cached["errors"] else 0
+    for name in (rec["jobname"] + ".pdf", "qa.json", "latex.log"):
+        (review / name).unlink(missing_ok=True)
     with tempfile.TemporaryDirectory(prefix="cv-html-") as temp:
+        render = source
+        if not online_fonts:
+            render = Path(temp) / source.name
+            render.write_text(WEB_FONT_LINKS.sub("", html_text), encoding="utf-8")
         run = subprocess.run(
             [
                 chrome_binary(),
                 "--headless=new",
                 "--disable-gpu",
                 "--no-pdf-header-footer",
-                "--virtual-time-budget=8000",
-                f"--user-data-dir={temp}",
+                f"--virtual-time-budget={8000 if online_fonts else 1500}",
+                f"--user-data-dir={Path(temp) / 'profile'}",
                 f"--print-to-pdf={review_pdf}",
-                source.as_uri(),
+                render.as_uri(),
             ],
             capture_output=True,
             text=True,
@@ -571,7 +594,8 @@ def build_html(root: Path, rec: dict, publish: bool = False) -> int:
         with destination.open("xb") as out, review_pdf.open("rb") as inp:
             shutil.copyfileobj(inp, out)
     report["pdf"] = str(destination)
-    (review / "qa.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    report["source_sha"] = digest
+    qa_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(report, indent=2))
     return 1 if report["errors"] else 0
 
