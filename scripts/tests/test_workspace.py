@@ -192,6 +192,21 @@ class WorkspaceTests(unittest.TestCase):
             (root / rec["entry"]).write_text("<html></html>", encoding="utf-8")
             self.assertEqual(w.dependencies(root, rec["entry"]), {rec["entry"]})
 
+    def test_render_html_parsers(self) -> None:
+        import render_html as r
+        self.assertEqual(r.compact_dates("Mar 2025 – Sep 2025"), "Mar – Sep 2025")
+        self.assertEqual(r.compact_dates("Dec 2025 – Mar 2026"), "Dec 2025 – Mar 2026")
+        body = "- **Dates:** Jan 2023 – Mar 2023\n- **Reusable Candidate Bullets:**\n  - `Did A`\n  - `Did B`\n"
+        self.assertEqual(r.field(body, "Dates"), "Jan 2023 – Mar 2023")
+        self.assertEqual(r.bullets(body), ["Did A", "Did B"])
+        name, contact = r.render_header(
+            "{\\Large \\textbf{Jane Doe}}\n{\\normalsize City \\quad\\textbar\\quad "
+            "\\href{mailto:jd-mail}{jd-mail} \\quad\\textbar\\quad \\href{https://github.com/jd}{GitHub}}"
+        )
+        self.assertEqual(name, "Jane Doe")
+        self.assertIn("City · jd-mail", contact)
+        self.assertIn('href="https://github.com/jd"', contact)
+
     def test_path_escape_rejected(self) -> None:
         p = self.init()
         m = p / "metadata.yaml"

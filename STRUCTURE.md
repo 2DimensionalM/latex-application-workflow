@@ -59,6 +59,7 @@
 | `versions/letter/{baseline,targeted}/` | 求职信编译入口 |
 | `output/review/<JOBNAME>/` | 默认隔离构建输出（PDF、`build.log`、`latex.log`、`qa.json`），不会覆盖已发布快照 |
 | `output/cv/`、`output/cover-letters/pdf/` | `--publish` 产出的正式投递快照目录 |
+| `scripts/render_html.py` + `src/html/resume.template.html` | 从 `content/master/*.md` 与私有页眉生成 HTML 母版 `content/master/resume.html`（输出被 Git 忽略；模板只含版式） |
 | `webui/` | 本地网页工作台（`server.py` + `index.html`），仅监听 127.0.0.1，不含私有数据 |
 | `versions/cv/targeted/*.html` | HTML 定向简历入口（Git 忽略，由 headless Chrome 渲染并走同一套 PDF QA） |
 | `scripts/workspace.py` | 核心 Harness：支持 `bootstrap`、`init`、`check`、`list`、`build`、`qa`、`affected` |

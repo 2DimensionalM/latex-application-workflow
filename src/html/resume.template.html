@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{TITLE}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Carlito:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4; margin: 0; }
+  :root {
+    --ink: #1c2430;
+    --muted: #5a6472;
+    --accent: #1f4e79;
+    --rule: #c9d3de;
+    --side-bg: #f3f6f9;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 210mm; height: 297mm; }
+  body {
+    font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+    font-size: 8.5pt;
+    line-height: 1.31;
+    color: var(--ink);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .page { padding: 11mm 12mm 10mm 12mm; height: 297mm; overflow: hidden; }
+
+  /* Header */
+  header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8mm; }
+  .id h1 { font-size: 21pt; font-weight: 700; letter-spacing: -0.01em; line-height: 1.1; }
+  .id .tagline { font-size: 10pt; font-weight: 500; color: var(--accent); margin-top: 1.2mm; }
+  .id .contact { margin-top: 2.2mm; color: var(--muted); font-size: 8.4pt; line-height: 1.5; }
+  .id .contact a { color: var(--muted); text-decoration: none; }
+  .photo {
+    flex: 0 0 auto;
+    width: 27mm; height: 34mm;
+    border: 0.6pt dashed #9aa7b5;
+    border-radius: 1.5mm;
+    display: flex; align-items: center; justify-content: center;
+    color: #9aa7b5; font-size: 7.5pt;
+  }
+  .photo img { width: 100%; height: 100%; object-fit: cover; border-radius: 1.5mm; }
+
+  .profile { margin-top: 2.4mm; }
+  header { padding-bottom: 3mm; border-bottom: 1.2pt solid var(--accent); }
+
+  /* Two columns */
+  .cols { display: flex; gap: 6mm; margin-top: 3.4mm; }
+  .main { flex: 1 1 auto; min-width: 0; }
+  .side { flex: 0 0 55mm; background: var(--side-bg); border-radius: 2mm; padding: 3.5mm 4mm; }
+
+  h2 {
+    font-size: 8.4pt; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase;
+    color: var(--accent);
+    padding-bottom: 1mm; border-bottom: 0.6pt solid var(--rule);
+    margin: 3.4mm 0 1.6mm;
+  }
+  section:first-child h2 { margin-top: 0; }
+
+  .entry { margin-bottom: 2.3mm; }
+  .entry:last-child { margin-bottom: 0; }
+  .row { display: flex; justify-content: space-between; gap: 3mm; align-items: baseline; }
+  .org { font-weight: 700; }
+  .date { color: var(--muted); white-space: nowrap; font-size: 8.1pt; }
+  .role { color: var(--muted); font-size: 8.2pt; }
+  .role a { color: var(--accent); text-decoration: none; }
+  ul { margin-top: 0.8mm; padding-left: 3.4mm; }
+  li { margin-bottom: 0.3mm; }
+  li::marker { color: var(--accent); }
+
+  /* Sidebar */
+  .side h2 { margin-top: 4.2mm; }
+  .side section:first-child h2 { margin-top: 0; }
+  .side .entry { margin-bottom: 2.4mm; }
+  .side .org { display: block; }
+  .side .meta { color: var(--muted); font-size: 8pt; }
+  .side .course { margin-top: 0.8mm; font-size: 8pt; }
+  .skill { margin-bottom: 1.8mm; }
+  .skill b { display: block; font-size: 8.2pt; }
+  .skill span { font-size: 8pt; }
+  .lang { display: flex; justify-content: space-between; gap: 3mm; font-size: 8.2pt; margin-bottom: 0.6mm; }
+  .lang span:last-child { color: var(--muted); text-align: right; }
+
+  /* ---------- editor chrome (never printed) ---------- */
+  .toolbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 10px 16px; background: #1c2430; color: #fff;
+    font: 13px/1.4 -apple-system, "Segoe UI", "Inter", sans-serif;
+  }
+  .toolbar button {
+    font: inherit; font-weight: 600; cursor: pointer;
+    padding: 6px 14px; border-radius: 6px; border: 0;
+    background: #fff; color: #1c2430;
+  }
+  .toolbar button.secondary { background: transparent; color: #fff; border: 1px solid #6b7686; }
+  .toolbar .hint { color: #b8c2cf; }
+  .toolbar .warn { color: #ffb4a8; font-weight: 600; display: none; }
+  .toolbar .warn.show { display: inline; }
+  [contenteditable]:focus { outline: none; }
+  [contenteditable] *:hover { background: rgba(31, 78, 121, 0.06); }
+  @media print {
+    .toolbar, #photoInput { display: none !important; }
+    [contenteditable] *:hover { background: none; }
+  }
+
+  @media screen {
+    html, body { width: auto; height: auto; }
+    body { background: #e4e8ed; padding: 64px 0 40px; }
+    .page { width: 210mm; margin: 0 auto; background: #fff; box-shadow: 0 2px 14px rgba(0,0,0,.15); }
+  }
+  @media print { html, body { width: 210mm; height: 297mm; } }
+  .photo.has-photo { border: 0; }
+  @media print { .photo:not(.has-photo) { visibility: hidden; } }
+</style>
+</head>
+<body>
+<div class="toolbar" contenteditable="false">
+  <button type="button" onclick="exportPdf()">Export PDF</button>
+  <button type="button" class="secondary" onclick="saveHtml()">Save HTML</button>
+  <span class="hint">Click any text to edit · click the photo box to add a photo · Save HTML keeps your edits</span>
+  <span class="warn" id="overflowWarn">⚠ Content runs past one page</span>
+</div>
+<input type="file" id="photoInput" accept="image/*" style="display:none">
+<div class="page" contenteditable="true" spellcheck="false">
+{{PAGE}}
+
+</div>
+<script>
+function exportPdf() {
+  // In the print dialog: Destination "Save as PDF", Margins "Default", tick "Background graphics".
+  window.print();
+}
+
+function saveHtml() {
+  const html = '<!doctype html>\n' + document.documentElement.outerHTML;
+  const blob = new Blob([html], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (location.pathname.split('/').pop() || 'cv.html');
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+// Photo: click the box to choose a picture; it is embedded in the page, so "Save HTML" keeps it.
+(function () {
+  const box = document.querySelector('.photo');
+  const input = document.getElementById('photoInput');
+  if (!box || !input) return;
+  box.setAttribute('contenteditable', 'false');
+  box.style.cursor = 'pointer';
+  box.title = 'Click to add or change the photo';
+  box.addEventListener('click', () => input.click());
+  input.addEventListener('change', () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      box.innerHTML = '';
+      const img = document.createElement('img');
+      img.src = reader.result; img.alt = 'Photo';
+      box.appendChild(img);
+      box.classList.add('has-photo');
+      checkOverflow();
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+  });
+})();
+
+// One-page layouts: warn when edits push content past the bottom of the A4 page.
+function checkOverflow() {
+  const warn = document.getElementById('overflowWarn');
+  const page = document.querySelector('.page');
+  if (!warn || !page) return;
+  const cols = [...page.querySelectorAll('.main, .side')];
+  if (!cols.length) return;
+  const bottom = Math.max(...cols.map(c => c.getBoundingClientRect().bottom));
+  const limit = page.getBoundingClientRect().bottom - 2;
+  warn.classList.toggle('show', bottom > limit);
+}
+document.addEventListener('input', checkOverflow);
+window.addEventListener('load', checkOverflow);
+document.fonts && document.fonts.ready.then(checkOverflow);
+</script>
+</body>
+</html>
