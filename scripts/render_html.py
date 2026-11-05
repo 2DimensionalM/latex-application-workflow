@@ -100,12 +100,14 @@ def render_projects(text: str) -> str:
     for heading, body in sections(text):
         if not on_baseline(body):
             continue
-        m = DATE_RANGE.search(field(body, "Context & Dates"))
+        context = field(body, "Context & Dates")
+        # Prefer the dates in parentheses (project period) over data ranges in the text.
+        m = re.search(r"\(([A-Z][a-z]{2} \d{4}(?: – [A-Z][a-z]{2} \d{4})?)\)", context) or DATE_RANGE.search(context)
         role = e(field(body, "Tech Stack"))
         repo = field(body, "Repository")
         if repo:
             role += f' · <a href="{e(repo)}">GitHub</a>'
-        out.append(entry(heading_name(heading), compact_dates(m[0]) if m else "", role, bullets(body)))
+        out.append(entry(heading_name(heading), compact_dates(m[1] if m.re is not DATE_RANGE else m[0]) if m else "", role, bullets(body)))
     return "".join(out)
 
 
