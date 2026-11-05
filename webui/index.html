@@ -114,6 +114,12 @@
     <iframe id="pv"></iframe>
     <div id="clJob"></div>
     <pre class="letter" id="cl" hidden></pre>
+    <div id="revise" hidden style="margin-top:12px">
+      <h2 style="margin-top:4px">不满意?告诉 Claude 怎么改</h2>
+      <textarea id="reviseText" placeholder="例如:Profile 更突出 dashboard 和报表自动化;把 Baijiu 项目放到第一个;Vizard 第二条写得更短。Claude 只会用事实库里已有的内容,不会编造。"></textarea>
+      <div class="actions" style="margin-top:8px"><button id="reviseGo">让 Claude 修改</button><span class="muted" style="font-size:12px">修改前会自动备份当前版本到 targets/&lt;slug&gt;/.history/</span></div>
+      <div id="reviseJob"></div>
+    </div>
   </section>
 </main>
 <script>
@@ -144,8 +150,8 @@ async function load() {
       <td class="date">${esc(t.date_applied) || '—'}</td>
       <td><select data-slug="${t.slug}">${opts.map(s => `<option ${s===t.progress?'selected':''}>${esc(s)}</option>`).join('')}</select></td>
       <td><div class="actions">
-        ${t.resume_is_html ? `<button class="ghost" data-prev="${t.slug}">简历预览</button>` : ''}
-        <button class="ghost" data-cl="${t.slug}">${t.has_cover_letter ? '查看求职信' : '生成求职信'}</button>
+        ${t.resume_is_html ? `<button class="ghost" data-prev="${t.slug}">简历预览 / 修改</button>` : ''}
+        <button class="ghost" data-cl="${t.slug}">${t.has_cover_letter ? '求职信 / 修改' : '生成求职信'}</button>
         ${t.source_url ? `<a href="${esc(t.source_url)}" target="_blank" rel="noopener">职位页</a>` : ''}
       </div></td>
     </tr>`;
@@ -196,22 +202,46 @@ $('rows').onchange = async e => {
   load();
 };
 
+const viewing = {slug: null, kind: null};
+function showRevise(slug, kind) {
+  Object.assign(viewing, {slug, kind});
+  $('revise').hidden = !kind; $('reviseJob').innerHTML = '';
+  $('reviseText').placeholder = kind === 'letter'
+    ? '例如:第一段开头更具体地写为什么是这家公司;第四段的入职计划写得更具体;整体再短一点。'
+    : '例如:Profile 更突出 dashboard 和报表自动化;把 Baijiu 项目放到第一个;Vizard 第二条写得更短。Claude 只会用事实库里已有的内容,不会编造。';
+}
+$('reviseGo').onclick = async () => {
+  const instruction = $('reviseText').value.trim();
+  if (!instruction) return alert('先写下你想怎么改');
+  const {slug, kind} = viewing;
+  $('reviseGo').disabled = true;
+  const r = await post(`/api/targets/${slug}/revise`, {kind, instruction});
+  if (r.error) { $('reviseGo').disabled = false; return alert(r.error); }
+  watch(r.job, $('reviseJob'), kind === 'letter' ? '修改求职信' : '修改简历', async j => {
+    $('reviseGo').disabled = false;
+    if (j.state === 'done') $('reviseText').value = '';
+    if (kind === 'resume') $('pv').src = `/preview/${slug}?t=${Date.now()}`;
+    else { const t = await fetch(`/api/targets/${slug}/cover-letter`).then(r => r.json()); $('cl').textContent = t.text; }
+  });
+};
+
 $('rows').onclick = async e => {
   const prev = e.target.dataset.prev, cl = e.target.dataset.cl;
   if (prev) {
     show(prev, '简历预览'); $('pv').hidden = false; $('openPdf').hidden = false; $('cl').hidden = true; $('clJob').innerHTML = '';
-    $('pv').src = '/preview/' + prev;
+    $('pv').src = '/preview/' + prev; showRevise(prev, 'resume');
   }
   if (cl) {
     show(cl, '求职信'); $('pv').hidden = true; $('openPdf').hidden = true; $('pv').src = 'about:blank';
     const {text} = await fetch(`/api/targets/${cl}/cover-letter`).then(r => r.json());
+    showRevise(cl, text ? 'letter' : null);
     if (text) { $('clJob').innerHTML = ''; $('cl').hidden = false; return $('cl').textContent = text; }
     $('cl').hidden = true;
     const r = await post(`/api/targets/${cl}/cover-letter`);
     if (r.error) return alert(r.error);
     watch(r.job, $('clJob'), '生成求职信', async () => {
       const t = await fetch(`/api/targets/${cl}/cover-letter`).then(r => r.json());
-      if (t.text) { $('cl').hidden = false; $('cl').textContent = t.text; }
+      if (t.text) { $('cl').hidden = false; $('cl').textContent = t.text; showRevise(cl, 'letter'); }
       load();
     });
   }
@@ -301,7 +331,7 @@ $('factRender').onclick = async () => {
     + (r.warnings && r.warnings.length ? ' · ' + r.warnings.join('; ') : '');
 };
 $('factPdf').onclick = () => {
-  show('master', '母版简历'); $('pv').hidden = false; $('openPdf').hidden = false; $('cl').hidden = true; $('clJob').innerHTML = '';
+  show('master', '母版简历'); showRevise(null, null); $('pv').hidden = false; $('openPdf').hidden = false; $('cl').hidden = true; $('clJob').innerHTML = '';
   $('pv').src = '/preview/master?t=' + Date.now();
 };
 window.addEventListener('beforeunload', e => { if (dirty()) { e.preventDefault(); e.returnValue = ''; } });
