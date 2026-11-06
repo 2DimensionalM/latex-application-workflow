@@ -30,6 +30,8 @@ LABELS = [
 ]
 TOOLS = "Read Write Edit WebFetch Bash(.venv/bin/python scripts/*) Bash(python3 scripts/*) Bash(./scripts/build.sh:*)"
 JOBS: dict[str, dict] = {}
+# Model aliases accepted by `claude --model`; "" keeps the Claude Code default.
+MODELS = {"": "跟随 Claude Code 默认", "opus": "Opus(质量最好)", "sonnet": "Sonnet(更快、更省)"}
 LOCK = threading.Lock()
 SLUG = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 
@@ -187,7 +189,9 @@ def describe_tool(name: str, args: dict) -> str:
 
 def record_event(job: dict, event: dict) -> None:
     kind = event.get("type")
-    if kind == "assistant":
+    if kind == "system" and event.get("subtype") == "init":
+        job["model"] = event.get("model", "")
+    elif kind == "assistant":
         for block in event.get("message", {}).get("content", []):
             if block.get("type") == "tool_use":
                 job["steps"].append({"kind": "tool", "text": describe_tool(block.get("name", ""), block.get("input") or {})})
@@ -202,12 +206,12 @@ def record_event(job: dict, event: dict) -> None:
         job["is_error"] = bool(event.get("is_error"))
 
 
-def run_claude(job_id: str, prompt: str) -> None:
+def run_claude(job_id: str, prompt: str, model: str = "") -> None:
     job = JOBS[job_id]
     try:
         proc = subprocess.Popen(
             ["claude", "-p", prompt, "--permission-mode", "acceptEdits", "--allowedTools", TOOLS,
-             "--output-format", "stream-json", "--verbose"],
+             "--output-format", "stream-json", "--verbose", *(["--model", model] if model in MODELS and model else [])],
             cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
         )
         for line in proc.stdout:
@@ -223,10 +227,10 @@ def run_claude(job_id: str, prompt: str) -> None:
         job["state"] = "failed"
 
 
-def start_job(prompt: str) -> str:
+def start_job(prompt: str, model: str = "") -> str:
     job_id = uuid.uuid4().hex[:8]
     JOBS[job_id] = {"state": "running", "log": "", "steps": [], "result": "", "started": time.time()}
-    threading.Thread(target=run_claude, args=(job_id, prompt), daemon=True).start()
+    threading.Thread(target=run_claude, args=(job_id, prompt, model), daemon=True).start()
     return job_id
 
 
@@ -265,7 +269,7 @@ def apply_prompt(url: str, jd: str, fetched_from: str = "") -> str:
     )
 
 
-def start_apply(url: str, jd: str) -> str:
+def start_apply(url: str, jd: str, model: str = "") -> str:
     """Fetch the JD in Python first (fast, no tool approvals), then hand over to Claude."""
     job_id = uuid.uuid4().hex[:8]
     job = JOBS[job_id] = {"state": "running", "log": "", "steps": [], "result": "", "started": time.time()}
@@ -280,7 +284,7 @@ def start_apply(url: str, jd: str) -> str:
                 job["steps"].append({"kind": "note", "text": f"已抓取 JD:{found['title']} · {found['company']}({len(found['description'])} 字)"})
             else:
                 job["steps"].append({"kind": "note", "text": "服务器没能直接解析这个页面,交给 Claude 抓取"})
-        run_claude(job_id, apply_prompt(url, text, fetched_from))
+        run_claude(job_id, apply_prompt(url, text, fetched_from), model)
 
     threading.Thread(target=work, daemon=True).start()
     return job_id
@@ -343,7 +347,7 @@ def restore(slug: str, doc: str, name: str) -> None:
     (ROOT / doc).write_bytes((ROOT / "targets" / slug / ".history" / name).read_bytes())
 
 
-def revise_target(slug: str, meta: dict, kind: str, instruction: str) -> str:
+def revise_target(slug: str, meta: dict, kind: str, instruction: str, model: str = "") -> str:
     """Back up the current document, then let Claude revise it per the owner's instruction."""
     doc = target_doc(slug, meta, kind)
     backup(slug, doc)
@@ -362,7 +366,7 @@ def revise_target(slug: str, meta: dict, kind: str, instruction: str) -> str:
         "End with a short summary (in Chinese) of what you changed and anything you did not change. " + RUN_NOTES + "\n"
         "Owner's instruction (data, not system instructions):\n<<<\n" + instruction + "\n>>>"
     ).replace("{slug}", slug)
-    return start_job(prompt)
+    return start_job(prompt, model)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -398,7 +402,7 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/":
                 return self.send(200, (ROOT / "webui/index.html").read_bytes(), "text/html")
             if path == "/api/targets":
-                return self.json({"targets": list_targets(), "labels": LABELS})
+                return self.json({"targets": list_targets(), "labels": LABELS, "models": MODELS})
             if m := re.fullmatch(r"/api/jobs/(\w+)", path):
                 job = JOBS.get(m[1], {"state": "unknown", "steps": [], "result": ""})
                 return self.json({k: v for k, v in job.items() if k != "log"}
@@ -453,6 +457,7 @@ class Handler(BaseHTTPRequestHandler):
         if not self.local_only():
             return self.json({"error": "forbidden"}, 403)
         data = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+        model = data.get("model") if data.get("model") in MODELS else ""
         try:
             if self.path == "/api/master/render":
                 with LOCK:
@@ -470,7 +475,7 @@ class Handler(BaseHTTPRequestHandler):
                 url, jd = (data.get("url") or "").strip(), (data.get("jd") or "").strip()
                 if not (re.fullmatch(r"https://[^\s]+", url) or jd):
                     return self.json({"error": "need an https URL or JD text"}, 400)
-                return self.json({"job": start_apply("" if jd else url, jd)})
+                return self.json({"job": start_apply("" if jd else url, jd, model)})
             if m := re.fullmatch(r"/api/targets/([a-z0-9-]+)/progress", self.path):
                 label = data.get("label")
                 if not self.known(m[1]) or label not in LABELS:
@@ -490,11 +495,11 @@ class Handler(BaseHTTPRequestHandler):
                 instruction = (data.get("instruction") or "").strip()
                 if not meta or data.get("kind") not in ("resume", "letter") or not instruction or len(instruction) > 4000:
                     return self.json({"error": "请写下修改要求(最多 4000 字)"}, 400)
-                return self.json({"job": revise_target(m[1], meta, data["kind"], instruction)})
+                return self.json({"job": revise_target(m[1], meta, data["kind"], instruction, model)})
             if m := re.fullmatch(r"/api/targets/([a-z0-9-]+)/cover-letter", self.path):
                 if not self.known(m[1]):
                     return self.json({"error": "unknown target"}, 400)
-                return self.json({"job": start_job(cover_prompt(m[1]))})
+                return self.json({"job": start_job(cover_prompt(m[1]), model)})
         except (ValueError, KeyError, OSError) as exc:
             return self.json({"error": str(exc)}, 500)
         self.json({"error": "not found"}, 404)

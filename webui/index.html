@@ -73,7 +73,11 @@
 </head>
 <body>
 <main>
-  <h1>求职简历工作台</h1>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+    <h1 style="margin:0">求职简历工作台</h1>
+    <label class="muted" style="font-size:12px">Claude 模型
+      <select id="modelSel" style="width:auto;margin-left:6px"></select></label>
+  </div>
   <div class="stats" id="stats"></div>
 
   <section>
@@ -131,12 +135,19 @@
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const post = (u, b) => fetch(u, {method:'POST', body:JSON.stringify(b||{})}).then(r => r.json());
+const MODEL_KEY = 'resume-workbench-model';
+const currentModel = () => $('modelSel').value || '';
+// AI calls carry the selected model; other posts ignore the field.
+const post = (u, b) => fetch(u, {method:'POST', body:JSON.stringify({model: currentModel(), ...(b||{})})}).then(r => r.json());
 const GROUPS = ['准备中', '已投递 / 流程中', '已结束'];
 const mmss = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
 
 async function load() {
-  const {targets, labels} = await fetch('/api/targets').then(r => r.json());
+  const {targets, labels, models} = await fetch('/api/targets').then(r => r.json());
+  if (models && !$('modelSel').options.length) {
+    let saved = ''; try { saved = localStorage.getItem(MODEL_KEY) || ''; } catch (e) {}
+    $('modelSel').innerHTML = Object.entries(models).map(([k, v]) => `<option value="${k}" ${k === saved ? 'selected' : ''}>${esc(v)}</option>`).join('');
+  }
   const count = g => targets.filter(t => t.group === g).length;
   const applied = targets.filter(t => t.group >= 1).length;
   $('stats').innerHTML = [
@@ -175,7 +186,7 @@ function watch(job, box, title, done) {
     const steps = (j.steps || []).map(s => `<li class="${s.kind}">${esc(s.text)}</li>`).join('');
     const result = !running && j.result ? `<div class="result ${j.state === 'done' ? 'ok' : 'bad'}">${esc(j.result)}</div>` : '';
     box.innerHTML = `<div class="job">
-      <div class="job-head"><span>${icon}${esc(title)} · ${state}</span><span class="time">${mmss(j.elapsed || 0)} · ${(j.steps||[]).filter(s => s.kind==='tool').length} 步</span></div>
+      <div class="job-head"><span>${icon}${esc(title)} · ${state}${j.model ? ` <span class="muted" style="font-weight:400">· ${esc(j.model)}</span>` : ''}</span><span class="time">${mmss(j.elapsed || 0)} · ${(j.steps||[]).filter(s => s.kind==='tool').length} 步</span></div>
       ${steps ? `<ul>${steps}</ul>` : '<div class="muted" style="margin-top:8px">正在启动 Claude…</div>'}
       ${result}
       <details><summary>原始日志</summary><a href="/api/jobs/${job}/log" target="_blank">在新窗口查看</a></details>
@@ -275,6 +286,7 @@ $('rows').onclick = async e => {
 function show(slug, label) { $('viewer').hidden = false; $('vtitle').textContent = `${label} · ${slug}`; $('viewer').scrollIntoView({behavior:'smooth'}); }
 $('openPdf').onclick = () => window.open($('pv').src);
 $('closeV').onclick = () => { $('viewer').hidden = true; $('pv').src = 'about:blank'; };
+$('modelSel').onchange = () => { try { localStorage.setItem(MODEL_KEY, $('modelSel').value); } catch (e) {} };
 load();
 
 // ---- fact library ----
