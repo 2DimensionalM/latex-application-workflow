@@ -2,6 +2,7 @@
 """Local web UI over the workspace harness. Binds to 127.0.0.1 only. Run with .venv/bin/python."""
 from __future__ import annotations
 
+import argparse
 import contextlib
 import datetime as dt
 import hashlib
@@ -269,22 +270,139 @@ def apply_prompt(url: str, jd: str, fetched_from: str = "") -> str:
     )
 
 
+def slugify(text: str, limit: int = 60) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+    return slug[:limit].rsplit("-", 1)[0] if len(slug) > limit else slug
+
+
+def clean_location(location: str) -> str:
+    """'Utrecht, Utrecht, Netherlands' -> 'Utrecht, Netherlands'."""
+    parts = []
+    for part in (p.strip() for p in location.split(",")):
+        if part and part not in parts:
+            parts.append(part)
+    return ", ".join(parts)
+
+
+def posting_open(found: dict) -> bool | None:
+    """True/False when the fetched posting says so, None when it does not."""
+    facts = found.get("facts", {})
+    if facts.get("canApply") in ("True", "False"):
+        return facts["canApply"] == "True"
+    if re.search(r"no longer accepting applications", found.get("description", ""), re.I):
+        return False
+    until = facts.get("validThrough", "")[:10]
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", until):
+        return until >= dt.date.today().isoformat()
+    return True if "linkedin.com" in found.get("source", "") else None
+
+
+def prepare_target(url: str, found: dict) -> dict:
+    """Deterministic intake: register the target, write jd.md/notes.md and the resume copy.
+
+    Mirrors .agent/skills/job-intake so Claude only has to do the judgement work.
+    """
+    company = found["company"].strip()
+    company = company.title() if company.islower() else company
+    role = found["title"].strip()
+    req = found.get("facts", {}).get("jobReqId")
+    if req and req not in role:
+        role += f"（{req}）"
+    location = clean_location(found["location"]) or "待核实"
+    city = re.split(r",| - ", location)[0]
+    filler = {"internship", "intern", "27", "26", "2026", "2027", "the", "and", "of", "r"}
+    words = [w for w in slugify(found["title"], 200).split("-") if w not in filler and not w.isdigit()]
+    base = slugify(f"{company} {' '.join(words[:5])} intern {city}")
+    slug, n = base, 2
+    while (ROOT / "targets" / slug).exists():
+        slug, n = f"{base}-{n}", n + 1
+    args = argparse.Namespace(url=url, slug=slug, company=company, role=role, location=location, write=True)
+    with contextlib.redirect_stdout(io.StringIO()):
+        ws.init_target(ROOT, args)  # raises ValueError("URL already registered") for duplicates
+    folder = ROOT / "targets" / slug
+    meta = ws.yaml_load(folder / "metadata.yaml")
+    ident, today = meta["internal_id"], dt.date.today().isoformat()
+    facts = "".join(f"- **{k}:** {v}\n" for k, v in found.get("facts", {}).items())
+    (folder / "jd.md").write_text(
+        f"# {role} — {company}\n\n"
+        f"- **Internal ID:** `{ident}`\n- **Company:** {company}\n- **Location:** {location}\n"
+        f"- **Source URL:** {found['source']}\n- **Captured Date:** {today}\n"
+        f"- **Captured by:** web UI server fetch (verbatim posting text below)\n{facts}\n---\n\n"
+        f"{found['description']}\n", encoding="utf-8")
+    is_open = posting_open(found)
+    (folder / "notes.md").write_text(
+        f"# Notes — {ident} {company} — {role}\n\n"
+        f"- Registered {today} from {found['source']} by the web UI (server-side fetch).\n"
+        f"- Posting status at capture: {'open' if is_open else 'closed' if is_open is False else 'not stated on the page'}.\n",
+        encoding="utf-8")
+    entry = f"versions/cv/targeted/{ident}-resume-{slug}.html"
+    (ROOT / entry).parent.mkdir(parents=True, exist_ok=True)
+    (ROOT / entry).write_text(render_html.render(ROOT), encoding="utf-8")
+    meta_path = folder / "metadata.yaml"
+    text = meta_path.read_text(encoding="utf-8")
+    text = re.sub(r"^resume_version:.*$", f"resume_version: {json.dumps(entry)}", text, flags=re.M)
+    if is_open:
+        text = re.sub(r"^status:.*$", 'status: "open"', text, flags=re.M)
+    meta_path.write_text(text, encoding="utf-8")
+    with LOCK:
+        set_progress(slug, "Drafting Resume" if is_open else "Pending Verification")
+    return {"slug": slug, "id": ident, "entry": entry, "open": is_open}
+
+
+def tailor_prompt(t: dict) -> str:
+    slug, ident, entry = t["slug"], t["id"], t["entry"]
+    return (
+        f"Follow AGENTS.md. Target {ident} is already registered by the server: targets/{slug}/ has metadata.yaml, "
+        f"jd.md (verbatim posting) and notes.md, PROJECT_STATUS.md has its row, and {entry} is a fresh copy of the "
+        "master resume with resume_version already set. Do NOT run workspace.py init, do not re-fetch the posting, "
+        "and do not edit PROJECT_STATUS.md or metadata.yaml status (the server updates progress afterwards).\n"
+        "Your tasks:\n"
+        f"1. If targets/{slug}/jd.md is not in English, translate the body faithfully into English (keep the header).\n"
+        f"2. Add logistics and first fit signals to targets/{slug}/notes.md (from jd.md only).\n"
+        f"3. Write targets/{slug}/tailoring.md with the six modules of .agent/rules/tailoring.md (job-prewrite).\n"
+        f"4. Tailor {entry} per .agent/skills/targeted-resume-html: only select, reorder and reword facts from "
+        "content/master/*.md; no invented facts; keep dates/titles/numbers; experience reverse-chronological.\n"
+        f"5. Run `.venv/bin/python scripts/workspace.py build resume:{ident}` until qa.json has no errors, Read the "
+        "PNG it writes for the visual check, then run `.venv/bin/python scripts/workspace.py check`.\n"
+        "Read only: .agent/skills/job-prewrite/SKILL.md, .agent/skills/targeted-resume-html/SKILL.md, "
+        ".agent/rules/{tailoring,content}.md, content/master/{profile,education,experience,projects,skills,certifications}.md, "
+        f"targets/{slug}/jd.md and {entry} (skip its contact block). "
+        "End with a short summary in Chinese. " + RUN_NOTES
+    )
+
+
 def start_apply(url: str, jd: str, model: str = "") -> str:
-    """Fetch the JD in Python first (fast, no tool approvals), then hand over to Claude."""
+    """Fetch the JD and do intake in Python (fast, deterministic), then let Claude tailor."""
     job_id = uuid.uuid4().hex[:8]
     job = JOBS[job_id] = {"state": "running", "log": "", "steps": [], "result": "", "started": time.time()}
+    note = lambda text: job["steps"].append({"kind": "note", "text": text})
 
     def work() -> None:
-        text, fetched_from = jd, ""
+        found = None
         if url and not jd:
-            job["steps"].append({"kind": "note", "text": "服务器正在抓取 JD…"})
+            note("服务器正在抓取 JD…")
             found = jd_fetch.fetch(url)
             if found:
-                text, fetched_from = jd_fetch.as_text(found), found["source"]
-                job["steps"].append({"kind": "note", "text": f"已抓取 JD:{found['title']} · {found['company']}({len(found['description'])} 字)"})
+                note(f"已抓取 JD:{found['title']} · {found['company']}({len(found['description'])} 字)")
             else:
-                job["steps"].append({"kind": "note", "text": "服务器没能直接解析这个页面,交给 Claude 抓取"})
-        run_claude(job_id, apply_prompt(url, text, fetched_from), model)
+                note("服务器没能直接解析这个页面,交给 Claude 抓取并登记")
+        if not found:  # pasted JD or unparsable page: Claude runs the whole workflow
+            run_claude(job_id, apply_prompt(url, jd), model)
+            return
+        try:
+            target = prepare_target(url, found)
+        except (ValueError, OSError, KeyError) as exc:
+            job.update(state="failed", result=f"登记失败:{exc}")
+            return
+        note(f"已登记为 {target['id']}({target['slug']}),写好 jd.md、notes.md,复制了母版简历"
+             + ("" if target["open"] else ";招聘页未确认仍在招,进展记为 Pending Verification"))
+        run_claude(job_id, tailor_prompt(target), model)
+        qa_path = ROOT / "output/review" / Path(target["entry"]).stem / "qa.json"
+        report = json.loads(qa_path.read_text(encoding="utf-8")) if qa_path.is_file() else {}
+        if job["state"] == "done" and target["open"] and report and not report.get("errors"):
+            with LOCK:
+                set_progress(target["slug"], "Reviewing Resume")
+            note("质检通过,进展已更新为 Reviewing Resume")
 
     threading.Thread(target=work, daemon=True).start()
     return job_id
