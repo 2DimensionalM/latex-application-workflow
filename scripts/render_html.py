@@ -8,6 +8,7 @@ Writes content/master/resume.html (Git-ignored). Prints only the output path.
 from __future__ import annotations
 
 import argparse
+import base64
 import html
 from pathlib import Path
 import re
@@ -18,6 +19,7 @@ MASTER = ROOT / "content/master"
 TEMPLATE = ROOT / "src/html/resume.template.html"
 HEADER = ROOT / "src/sections/header.private.tex"
 OUTPUT = MASTER / "resume.html"
+PHOTOS = {"photo.jpg": "image/jpeg", "photo.jpeg": "image/jpeg", "photo.png": "image/png"}
 DATE_RANGE = re.compile(r"([A-Z][a-z]{2}) (\d{4}) – ([A-Z][a-z]{2}) (\d{4})")
 
 e = html.escape
@@ -162,6 +164,16 @@ def render_header(tex: str) -> tuple[str, str]:
     return (name[1] if name else "[Full Name]"), contact
 
 
+def render_photo(master: Path) -> str:
+    """Photo box: the private content/master/photo.* embedded as a data URI, or the empty placeholder."""
+    for name, mime in PHOTOS.items():
+        file = master / name
+        if file.is_file():
+            data = base64.b64encode(file.read_bytes()).decode("ascii")
+            return f'<div class="photo has-photo"><img src="data:{mime};base64,{data}" alt="Photo"></div>'
+    return '<div class="photo">Photo</div>'
+
+
 def render(root: Path = ROOT) -> str:
     master = root / "content/master"
     read = lambda name: (master / name).read_text(encoding="utf-8")
@@ -184,7 +196,7 @@ def render(root: Path = ROOT) -> str:
     {e(summary[1] if summary else "")}
       </div>
     </div>
-    <div class="photo">Photo</div>
+    {render_photo(master)}
   </header>
 
   <div class="cols">

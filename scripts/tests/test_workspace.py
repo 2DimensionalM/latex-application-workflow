@@ -192,6 +192,16 @@ class WorkspaceTests(unittest.TestCase):
             (root / rec["entry"]).write_text("<html></html>", encoding="utf-8")
             self.assertEqual(w.dependencies(root, rec["entry"]), {rec["entry"]})
 
+    def test_render_html_photo(self) -> None:
+        import render_html as r
+        with tempfile.TemporaryDirectory() as tmp:
+            master = Path(tmp)
+            self.assertEqual(r.render_photo(master), '<div class="photo">Photo</div>')
+            (master / "photo.jpg").write_bytes(b"\xff\xd8test")
+            box = r.render_photo(master)
+            self.assertIn('class="photo has-photo"', box)
+            self.assertIn("data:image/jpeg;base64,/9h0ZXN0", box)
+
     def test_render_html_parsers(self) -> None:
         import render_html as r
         self.assertEqual(r.compact_dates("Mar 2025 – Sep 2025"), "Mar – Sep 2025")

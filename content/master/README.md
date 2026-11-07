@@ -6,6 +6,7 @@
 
 - 仓库中**仅跟踪**本说明文件 `README.md` 与六个结构化示例模板 `*.example.md`。
 - 你的真实个人信息文件（`profile.md`、`education.md`、`experience.md`、`projects.md`、`skills.md`、`certifications.md`）已被 `.gitignore` 忽略，并受 `scripts/privacy_check.py` 保护，**绝不会被提交或上传到远程 Git 仓库**。
+- 可选的证件照 `photo.jpg`（或 `photo.png`）也放在本目录、同样被忽略；`scripts/render_html.py` 生成简历时会把它嵌入页眉右上角。
 
 ## 二、快速初始化（Onboarding）
 

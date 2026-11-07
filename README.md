@@ -68,6 +68,7 @@ python3 -m venv .venv
 # 3. 填写你自己的事实与联系方式（这些文件被 .gitignore 忽略）
 #    content/master/*.md            参照同目录 *.example.md 的结构
 #    src/sections/header.private.tex  姓名、城市、邮箱、电话、GitHub
+#    content/master/photo.jpg（可选） 证件照，生成时嵌入页眉右上角；没有就留空白照片框
 
 # 4. 生成 HTML 母版简历，并检查工作区
 .venv/bin/python scripts/render_html.py
@@ -169,7 +170,7 @@ python3 -m venv .venv
 
 以下内容被 `.gitignore` 忽略，**永远不应提交**：
 
-- `content/master/*`（事实库、生成的 `resume.html`、`.history/` 备份；只跟踪 `README.md` 与 `*.example.md`）
+- `content/master/*`（事实库、证件照 `photo.jpg`、生成的 `resume.html`、`.history/` 备份；只跟踪 `README.md` 与 `*.example.md`）
 - `src/sections/header.private.tex`（真实联系方式）
 - `targets/<slug>/`（真实岗位包；只跟踪 `targets/example-company-role/`）
 - `versions/cv/targeted/*.{tex,html}`、`versions/letter/targeted/*.{tex,html}`、`src/sections/targeted-*.tex` 等定制稿
