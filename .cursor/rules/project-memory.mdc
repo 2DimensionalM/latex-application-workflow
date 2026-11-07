@@ -1,11 +1,9 @@
 ---
-description: Thin Cursor router pointing to AGENTS.md and .agent/ Context Architecture
+description: Route Cursor to AGENTS.md and the one skill needed for the current task
 alwaysApply: true
 ---
-# Cursor Router -> `AGENTS.md` & `.agent/`
+# Cursor router
 
-This repository does not store long-term memory or domain rules in proprietary `.mdc` files. Before executing any task:
+Read [`AGENTS.md`](../../AGENTS.md). For a job URL through a finished resume and cover letter, read only [`.agent/skills/application-pipeline/SKILL.md`](../../.agent/skills/application-pipeline/SKILL.md). Do not preload `.agent/rules/`, `.agent/README.md`, or `STRUCTURE.md`.
 
-1. Read **[`AGENTS.md`](../../AGENTS.md)** at the repository root for safety boundaries, Git policy, and the on-demand task routing table.
-2. Load the matching stage skill from **[`.agent/skills/<skill-name>/SKILL.md`](../../.agent/skills/)** and the relevant domain rule from **[`.agent/rules/<topic>.md`](../../.agent/rules/)**.
-3. Never read, print, or commit `src/sections/header.private.tex`. Add any new long-term memory or workflow rules to `.agent/rules/` or `AGENTS.md`, never to this `.mdc` router.
+Never read, print, or commit `src/sections/header.private.tex`.

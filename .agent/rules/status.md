@@ -1,6 +1,6 @@
 # `PROJECT_STATUS.md` Standardization & Synchronization Rules (`status.md`)
 
-> Applicable when adding a new job target, linking published resume/cover letter PDFs, or updating application progress (applied, OA, interview, offer, rejected, closed). Associated skill: `.agent/skills/status-and-publish/SKILL.md`.
+> Reference only. Do not load this file while recording status or publishing. The status skill already states the procedure. Open this file when changing the status schema.
 
 ---
 

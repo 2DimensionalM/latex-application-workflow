@@ -1,6 +1,6 @@
 # Job URL & JD Intake Rules (`intake.md`)
 
-> Applicable when the user provides one or more job posting URLs (or raw JD text) and asks to register them into the workspace. Associated skill: `.agent/skills/job-intake/SKILL.md`.
+> Reference only. Do not load this file during job intake or resume production. Open it when changing the intake schema.
 
 ---
 

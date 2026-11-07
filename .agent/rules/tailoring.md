@@ -1,6 +1,6 @@
 # Role Pre-writing & Tailoring Rules (`tailoring.md`)
 
-> Applicable when preparing a role-specific pre-writing plan (`targets/<slug>/tailoring.md`) or before drafting a targeted resume and cover letter. Associated skill: `.agent/skills/job-prewrite/SKILL.md`.
+> Reference only. Do not load this file while writing `tailoring.md` or application materials. Open it when changing the tailoring schema.
 
 ---
 

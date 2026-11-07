@@ -1,6 +1,6 @@
 # Build, Automated QA & Publishing Rules (`build.md`)
 
-> Applicable when compiling resumes or cover letters, running single-page and density QA, performing incremental dependency builds, or publishing final PDF snapshots. For full CLI reference, see `scripts/README.md`.
+> Reference only. The application pipeline skill already names the build and QA commands. Open this file when changing the harness.
 
 ---
 

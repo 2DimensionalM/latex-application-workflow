@@ -39,12 +39,13 @@ This document defines the repository's Context Architecture and directory bounda
 
 | Path | Responsibility & Version-Control Boundary |
 |---|---|
-| `AGENTS.md` | Agent-agnostic primary entry point: core safety guardrails, Git policy, and 6-stage routing table |
-| `CLAUDE.md` | Claude Code entry router pointing to `AGENTS.md` and `.agent/` |
-| `.cursor/rules/project-memory.mdc` | Thin Cursor router pointing to `AGENTS.md` and `.agent/` (stores no long-term memory itself) |
-| `.agent/README.md` | Overview of the agent-agnostic Context Architecture hub |
-| `.agent/skills/<skill-name>/SKILL.md` | 6 standardized Agentic Workflow stage skills |
-| `.agent/rules/<topic>.md` | On-demand long-term memory and domain rules (`general.md`, `intake.md`, `tailoring.md`, `content.md`, `status.md`, `structure.md`, `build.md`) |
+| `AGENTS.md` | Safety boundaries and the one file to read for the current task |
+| `CLAUDE.md` | Claude Code router to `AGENTS.md` and the application pipeline skill |
+| `.cursor/rules/project-memory.mdc` | Cursor router to `AGENTS.md` and the application pipeline skill |
+| `.agent/README.md` | Index of skills; not part of resume or letter production |
+| `.agent/skills/application-pipeline/SKILL.md` | Job URL through resume and cover letter |
+| `.agent/skills/<stage>/SKILL.md` | One stage when the user asked for that stage only |
+| `.agent/rules/<topic>.md` | Reference for harness or rule changes (`general.md`, `intake.md`, `tailoring.md`, `content.md`, `status.md`, `structure.md`, `build.md`) |
 | `content/master/` | Candidate Master Fact Layer (SoT). Only `README.md` and `*.example.md` templates are tracked; real local `*.md` files are gitignored |
 | `RESUME_BASELINE.md` | Definition, refresh policy, and forking rules for the single Universal CV Baseline |
 | `targets/<slug>/` | One quartet per job role (`metadata.yaml`, `jd.md`, `notes.md`, `tailoring.md`). Only `targets/example-company-role/` is tracked |

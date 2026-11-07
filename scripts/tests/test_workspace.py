@@ -90,6 +90,7 @@ class WorkspaceTests(unittest.TestCase):
         self.assertTrue((w.ROOT / ".cursor/rules/project-memory.mdc").is_file())
         self.assertFalse((w.ROOT / ".cursor/skills").exists())
         expected_skills = {
+            "application-pipeline",
             "master-and-baseline",
             "job-intake",
             "job-prewrite",
@@ -97,6 +98,11 @@ class WorkspaceTests(unittest.TestCase):
             "targeted-cover-letter",
             "status-and-publish",
         }
+        agents = (w.ROOT / "AGENTS.md").read_text(encoding="utf-8")
+        self.assertIn(
+            "| Job URL through resume and cover letter | `.agent/skills/application-pipeline/SKILL.md` |",
+            agents,
+        )
         for skill in expected_skills:
             self.assertTrue((w.ROOT / ".agent/skills" / skill / "SKILL.md").is_file())
         expected_rules = {

@@ -1,6 +1,6 @@
 # Master Data, Resume & Cover Letter Content Rules (`content.md`)
 
-> Applicable when maintaining `content/master/`, refreshing the universal `baseline`, or drafting/editing targeted resumes (`src/sections/*.tex`) and cover letters (`src/sections/letters/*.tex`). Associated skills: `.agent/skills/master-and-baseline`, `.agent/skills/targeted-resume`, `.agent/skills/targeted-cover-letter`.
+> Reference only. Do not load this file while producing a resume or cover letter. The application pipeline skill already states the production constraints. Open this file when changing those constraints.
 
 ---
 

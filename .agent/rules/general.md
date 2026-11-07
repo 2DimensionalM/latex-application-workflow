@@ -1,6 +1,6 @@
 # Project Long-Term Memory & General Governance (`general.md`)
 
-> This directory (`.agent/rules/`) stores the long-term engineering rules and reusable constraints for `latex-application-workflow`. Root entry points (`AGENTS.md`, `CLAUDE.md`, and the thin `.cursor/rules/project-memory.mdc` router) hold only safety boundaries and on-demand routing; detailed domain rules are maintained here in pure Markdown.
+> Reference only. Do not load this directory while turning a job URL into a resume and cover letter. `AGENTS.md` names the one skill for that task. Open a rule file when changing the harness or when a QA gate is ambiguous.
 
 ---
 
@@ -15,7 +15,7 @@
 
 ## 2. Core Principles
 
-- **Understand Before Editing**: Follow the `AGENTS.md` routing table to read the relevant `.agent/skills/` file, `.agent/rules/` document, target quartet, and master facts before modifying files.
+- **One file for the current task**: Follow the `AGENTS.md` routing table. Read the named skill and the target files. Open `.agent/rules/` only when changing those rules or when a check fails for a reason the skill does not cover.
 - **Master-First Single Source of Truth (SoT)**: `content/master/` is the sole source of truth for candidate facts and evidence. Never fabricate experiences, metrics, tools, grades, or application events.
 - **Explicit One-Way Derivation**:
   - Updating `content/master/` **never automatically** rewrites `baseline`;

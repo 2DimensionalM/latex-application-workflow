@@ -1,6 +1,6 @@
 # LaTeX Structure, Versioning & Naming Rules (`structure.md`)
 
-> Applicable when adding or modifying LaTeX entry files (`versions/`), section fragments (`src/sections/`), or shared preambles and macros (`src/preamble*.tex`, `src/macros*.tex`).
+> Reference only. Open this file when changing LaTeX layout, entry wrappers, or naming. Do not load it while producing a resume or cover letter.
 
 ---
 

@@ -11,7 +11,7 @@ description: Initialize and maintain the candidate Master Fact Layer (content/ma
 - **Updating candidate facts**: Recording new internship/work stages, coursework/grades, projects, skills, or certifications into `content/master/`.
 - **Refreshing the Universal CV Baseline**: Updating `src/sections/baseline-universal.tex` and `RESUME_BASELINE.md` **only** when the user explicitly requests a baseline refresh.
 
-Read `content/master/README.md`, `RESUME_BASELINE.md`, and `.agent/rules/content.md` before making edits.
+Read the master file you are editing. Do not also open `.agent/rules/content.md` unless the edit changes a writing constraint.
 
 ---
 

@@ -4,7 +4,9 @@
 
 A **privacy-first, agent-agnostic (`.agent/` + `AGENTS.md` + `CLAUDE.md`), harness-driven** LaTeX workflow for engineering targeted English resumes (CVs) and cover letters.
 
-This repository decouples **candidate master facts (`content/master/`)**, **a single cross-market Universal CV Baseline (`baseline-universal.tex`)**, **role-specific pre-writing plans (`targets/<slug>/tailoring.md`)**, and **isolated LaTeX compilation with automated PDF layout QA (`scripts/workspace.py`)**. Every phase—from job URL intake to snapshot publishing and status tracking—is codified into standardized, portable Agent Skills under `.agent/skills/` and domain rules under `.agent/rules/`, ready to fork and extend across Claude Code, Codex, Cursor, OpenCode, or any other coding agent.
+This repository decouples **candidate master facts (`content/master/`)**, **a single cross-market Universal CV Baseline (`baseline-universal.tex`)**, **role-specific pre-writing plans (`targets/<slug>/tailoring.md`)**, and **isolated LaTeX compilation with automated PDF layout QA (`scripts/workspace.py`)**.
+
+Agents turning a job URL into a resume and cover letter should read [`AGENTS.md`](AGENTS.md) and [`.agent/skills/application-pipeline/SKILL.md`](.agent/skills/application-pipeline/SKILL.md), then stop. Do not preload this README, `STRUCTURE.md`, or `.agent/rules/`.
 
 ---
 
@@ -37,9 +39,9 @@ python3 -m venv .venv
 
 ---
 
-## 2. Six-Stage Agentic Workflow & Standardized Skills (`.agent/skills/`)
+## 2. Workflow skills (`.agent/skills/`)
 
-The workflow is organized into **6 standardized stage skills** under `.agent/skills/`, routed on demand via `AGENTS.md`, `CLAUDE.md`, and `.cursor/rules/project-memory.mdc`:
+A job URL that should become a resume and cover letter uses one skill: [`.agent/skills/application-pipeline/SKILL.md`](.agent/skills/application-pipeline/SKILL.md). The stage skills below are for a single step, not extra reading on that path.
 
 ```
 [Stage 0: Master & Baseline Maintenance]  (.agent/skills/master-and-baseline/SKILL.md)
