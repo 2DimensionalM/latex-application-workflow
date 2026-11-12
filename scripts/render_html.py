@@ -186,6 +186,7 @@ def render(root: Path = ROOT) -> str:
     skills, langs = render_skills(read("skills.md"))
     page = f"""
   <header>
+    {render_photo(master)}
     <div class="id">
       <h1>{e(name)}</h1>
       <div class="tagline">{e(tagline)}</div>
@@ -196,7 +197,6 @@ def render(root: Path = ROOT) -> str:
     {e(summary[1] if summary else "")}
       </div>
     </div>
-    {render_photo(master)}
   </header>
 
   <div class="cols">

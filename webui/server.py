@@ -386,9 +386,16 @@ def preloaded(paths: list[str]) -> str:
 
 
 def body_line(entry: str) -> int:
-    """1-based line just after </header> in a resume HTML, so a Read can skip the contact block."""
+    """1-based line where a Read of a resume HTML should start: the Profile block, which sits below the contact
+    block inside <header>; after </header> when there is no Profile. Name and contact stay unread."""
     lines = (ROOT / entry).read_text(encoding="utf-8").splitlines()
-    return next((i + 2 for i, line in enumerate(lines) if "</header>" in line), 1)
+    profile = next((i + 1 for i, line in enumerate(lines) if 'class="profile"' in line), None)
+    return profile or next((i + 2 for i, line in enumerate(lines) if "</header>" in line), 1)
+
+
+HEADER_NOTE = ("This starts at the Profile, below the name and contact block, so you never see contact details. "
+               "Tailor the Profile like the rest of the page. Leave the name and contact lines untouched; the tagline "
+               "may be reworded by an Edit whose old_string is the exact tagline from profile.md. ")
 
 
 def tailor_prompt(t: dict) -> str:
@@ -410,8 +417,7 @@ def tailor_prompt(t: dict) -> str:
         "PNG it writes for the visual check, then run `.venv/bin/python scripts/workspace.py check`.\n"
         f"The only files you still need to Read are targets/{slug}/notes.md and {entry} (the edit tools require a "
         f"Read first). Read both in one parallel batch at the start; Read the resume exactly once with offset "
-        f"{body_line(entry)} and no limit, which starts right after its header so you never see the contact block. "
-        "Do not edit the header. Only Read jd.md if you must rewrite it in step 1. "
+        f"{body_line(entry)} and no limit. " + HEADER_NOTE + "Only Read jd.md if you must rewrite it in step 1. "
         "End with a short summary in Chinese. " + RUN_NOTES
     )
 
@@ -529,8 +535,8 @@ def revise_target(slug: str, meta: dict, kind: str, instruction: str, model: str
     )
     skill = ".agent/skills/targeted-resume-html/SKILL.md" if kind == "resume" else ".agent/skills/targeted-cover-letter/SKILL.md"
     provided = ["AGENTS.md", skill, ".agent/rules/content.md", *MASTER_FACTS, f"targets/{slug}/jd.md", f"targets/{slug}/tailoring.md"]
-    read_doc = (f"Read {doc} exactly once with offset {body_line(doc)} and no limit (this skips the header and its "
-                "contact block; do not edit the header)" if kind == "resume" else f"Read {doc} once")
+    read_doc = (f"Read {doc} exactly once with offset {body_line(doc)} and no limit. " + HEADER_NOTE
+                if kind == "resume" else f"Read {doc} once")
     prompt = preloaded(provided) + (
         f"Follow AGENTS.md. Revise {doc} for target targets/{slug}/ according to the owner's instruction below. "
         f"{read_doc}; the edit tools require that Read. Do not Read any other file. "
