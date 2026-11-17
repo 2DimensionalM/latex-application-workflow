@@ -353,7 +353,7 @@ def prepare_target(url: str, found: dict) -> dict:
     meta_path.write_text(text, encoding="utf-8")
     with LOCK:
         set_progress(slug, "Drafting Resume" if is_open else "Pending Verification")
-    return {"slug": slug, "id": ident, "entry": entry, "open": is_open}
+    return {"slug": slug, "id": ident, "entry": entry, "spec": str(Path(entry).with_suffix(".md")), "open": is_open}
 
 
 # Files every tailoring run needs. The server inlines them so Claude skips a dozen Read round trips.
@@ -399,15 +399,27 @@ HEADER_NOTE = ("This starts at the Profile, below the name and contact block, so
                "may be reworded by an Edit whose old_string is the exact tagline from profile.md. ")
 
 
+SPEC_RULES = (
+    "The resume is a Markdown spec that the build renders to HTML. In the spec you choose and word content only: "
+    "Tagline, Profile, which Experience and Projects entries appear (### headings must match fact-file names exactly; "
+    "entries marked 'On baseline CV: no' may be added), their bullets, the Coursework line per school, and the Skills "
+    "lines ('- Category: items'). Dates, titles, employers, locations, tech stacks, links, name, contact and photo come "
+    "from the fact files automatically; Experience is printed newest first and every employer must stay. Bullets are "
+    "plain text. Only select, reorder and reword facts from content/master/*.md; never add facts, numbers or skills. "
+)
+
+
 def tailor_prompt(t: dict) -> str:
-    slug, ident, entry = t["slug"], t["id"], t["entry"]
-    provided = CONTEXT_FILES + [f"targets/{slug}/jd.md"]
+    slug, ident, spec = t["slug"], t["id"], t["spec"]
+    baseline = render_html.baseline_markdown(ROOT, f"Resume {ident} — {slug}")
     return (
-        preloaded(provided) +
+        preloaded(CONTEXT_FILES + [f"targets/{slug}/jd.md"]) +
+        f'<file path="{spec}" status="not on disk yet: the master resume as a spec, your starting point">\n'
+        f"{baseline.strip()}\n</file>\n\n"
         f"Follow AGENTS.md. Target {ident} is already registered by the server: targets/{slug}/ has metadata.yaml, "
-        f"jd.md (verbatim posting) and notes.md, PROJECT_STATUS.md has its row, and {entry} is a fresh copy of the "
-        "master resume with resume_version already set. Do NOT run workspace.py init, do not re-fetch the posting, "
-        "and do not edit PROJECT_STATUS.md or metadata.yaml status (the server updates progress afterwards).\n"
+        "jd.md (verbatim posting) and notes.md, PROJECT_STATUS.md has its row, and resume_version is set. "
+        "Do NOT run workspace.py init, do not re-fetch the posting, and do not edit PROJECT_STATUS.md or metadata.yaml "
+        "(the server updates progress afterwards).\n" + SPEC_RULES + "\n"
         "Your tasks:\n"
         f"1. If targets/{slug}/jd.md is not in English, translate the body faithfully into English (keep the header).\n"
         f"2. Add logistics and first fit signals to targets/{slug}/notes.md (from jd.md only).\n"
@@ -418,14 +430,13 @@ def tailor_prompt(t: dict) -> str:
         "'## Honest gaps' (JD asks that the master cannot support, plus anything marked Need verification, which must stay off "
         "the page). Skip the section plan, cover-letter plan and interview risks: the web UI writes those on demand later. "
         "This overrides the six-module layout in .agent/rules/tailoring.md for web UI runs.\n"
-        f"4. Tailor {entry} per .agent/skills/targeted-resume-html: only select, reorder and reword facts from "
-        "content/master/*.md; no invented facts; keep dates/titles/numbers; experience reverse-chronological.\n"
-        f"5. Run `.venv/bin/python scripts/workspace.py build resume:{ident}` until qa.json has no errors (QA also fails "
-        "when a master item marked Need verification, such as an unverified skill, appears on the page), Read the "
-        "PNG it writes for the visual check, then run `.venv/bin/python scripts/workspace.py check`.\n"
-        f"The only files you still need to Read are targets/{slug}/notes.md and {entry} (the edit tools require a "
-        f"Read first). Read both in one parallel batch at the start; Read the resume exactly once with offset "
-        f"{body_line(entry)} and no limit. " + HEADER_NOTE + "Only Read jd.md if you must rewrite it in step 1. "
+        f"4. Write the tailored spec to {spec} in ONE Write call, starting from the spec above.\n"
+        f"5. Run `.venv/bin/python scripts/workspace.py build resume:{ident}` and read the printed QA. Fix the spec with Edit "
+        "and rebuild until there are no errors (one page, nothing clipped, body ends at >= 80% of the page; QA also fails "
+        "when a master item marked Need verification appears). Read the PNG it writes only if the QA numbers look off. "
+        "Then run `.venv/bin/python scripts/workspace.py check` once.\n"
+        f"The only file you still need to Read is targets/{slug}/notes.md (the edit tools require a Read first); read it "
+        "at the start. Do not Read the resume HTML. Only Read jd.md if you must rewrite it in step 1. "
         "End with a short summary in Chinese. " + RUN_NOTES
     )
 
@@ -453,7 +464,7 @@ def start_apply(url: str, jd: str, model: str = "") -> str:
         except (ValueError, OSError, KeyError) as exc:
             job.update(state="failed", result=f"登记失败:{exc}")
             return
-        note(f"已登记为 {target['id']}({target['slug']}),写好 jd.md、notes.md,复制了母版简历"
+        note(f"已登记为 {target['id']}({target['slug']}),写好 jd.md、notes.md,准备好简历规格"
              + ("" if target["open"] else ";招聘页未确认仍在招,进展记为 Pending Verification"))
         run_claude(job_id, tailor_prompt(target), model)
         qa_path = ROOT / "output/review" / Path(target["entry"]).stem / "qa.json"
@@ -511,7 +522,8 @@ def target_doc(slug: str, meta: dict, kind: str) -> str:
         doc = meta.get("resume_version") or ""
         if not doc.endswith(".html") or not (ROOT / doc).is_file():
             raise ValueError("这个岗位还没有 HTML 定制简历")
-        return doc
+        spec = str(Path(doc).with_suffix(".md"))
+        return spec if (ROOT / spec).is_file() else doc  # newer resumes are Markdown specs
     doc = f"targets/{slug}/cover_letter.md"
     if not (ROOT / doc).is_file():
         raise ValueError("这个岗位还没有求职信草稿")
@@ -565,8 +577,13 @@ def revise_target(slug: str, meta: dict, kind: str, instruction: str, model: str
     )
     skill = ".agent/skills/targeted-resume-html/SKILL.md" if kind == "resume" else ".agent/skills/targeted-cover-letter/SKILL.md"
     provided = ["AGENTS.md", skill, ".agent/rules/content.md", *MASTER_FACTS, f"targets/{slug}/jd.md", f"targets/{slug}/tailoring.md"]
-    read_doc = (f"Read {doc} exactly once with offset {body_line(doc)} and no limit. " + HEADER_NOTE
-                if kind == "resume" else f"Read {doc} once")
+    if kind == "resume" and doc.endswith(".md"):
+        provided.append(doc)
+        read_doc = SPEC_RULES + f"Read {doc} once (it is also shown above)"
+    elif kind == "resume":
+        read_doc = f"Read {doc} exactly once with offset {body_line(doc)} and no limit. " + HEADER_NOTE
+    else:
+        read_doc = f"Read {doc} once"
     prompt = preloaded(provided) + (
         f"Follow AGENTS.md. Revise {doc} for target targets/{slug}/ according to the owner's instruction below. "
         f"{read_doc}; the edit tools require that Read. Do not Read any other file. "

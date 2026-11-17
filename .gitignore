@@ -19,6 +19,7 @@ targets/*/
 versions/cv/targeted/*.tex
 versions/letter/targeted/*.tex
 versions/cv/targeted/*.html
+versions/cv/targeted/*.md
 versions/letter/targeted/*.html
 !versions/letter/targeted/cover-letter-placeholder.tex
 src/sections/targeted-*.tex

@@ -584,6 +584,14 @@ def build_html(root: Path, rec: dict, publish: bool = False) -> int:
     if publish and destination.exists():
         raise ValueError("refusing to overwrite an existing PDF snapshot; use review build")
     source = (root / rec["entry"]).resolve()
+    spec = source.with_suffix(".md")
+    if spec.is_file():  # tailored resume written as a Markdown spec: render it first
+        import render_html
+
+        try:
+            source.write_text(render_html.render_markdown(spec.read_text(encoding="utf-8"), root), encoding="utf-8")
+        except (ValueError, KeyError) as exc:
+            raise ValueError(f"{spec.relative_to(root)}: {exc}") from None
     review_pdf = review / (rec["jobname"] + ".pdf")
     online_fonts = publish or os.environ.get("CV_ONLINE_FONTS") == "1"
     html_text = source.read_text(encoding="utf-8")

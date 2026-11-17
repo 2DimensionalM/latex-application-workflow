@@ -207,6 +207,50 @@ class WorkspaceTests(unittest.TestCase):
             self.assertEqual(w.unverified_hits(page, terms), ["Tableau"])
             self.assertEqual(w.unverified_hits("<span>Python, deepseeking</span>", terms), [])
 
+    def test_resume_markdown_spec(self) -> None:
+        import render_html as r
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            master = root / "content/master"
+            master.mkdir(parents=True)
+            (root / "src/html").mkdir(parents=True)
+            (root / "src/html/resume.template.html").write_text("<title>{{TITLE}}</title>{{PAGE}}", encoding="utf-8")
+            (master / "profile.md").write_text(
+                "- **CV tagline (current master):** Data · Finance\n\n## 3. Profile Summary Candidates\n- `Analyst who ships.`\n",
+                encoding="utf-8")
+            exp = lambda org, dates, b, base="": (f"## {org} — Intern\n- **Dates:** {dates}\n{base}"
+                                                  f"- **Reusable Candidate Bullets:**\n  - `{b}`\n\n")
+            (master / "experience.md").write_text(
+                exp("NewCo", "Mar 2025 – Sep 2025", "Built dashboards") + exp("OldCo", "Jan 2023 – Mar 2023", "Cleaned data"),
+                encoding="utf-8")
+            (master / "projects.md").write_text(
+                "## 1. Alpha\n- **Context & Dates:** (Mar 2026)\n- **Tech Stack:** Python\n"
+                "- **Reusable Candidate Bullets:**\n  - `Did alpha`\n\n"
+                "## 2. Beta\n- **Context & Dates:** (Apr 2025)\n- **On baseline CV:** no\n- **Tech Stack:** R\n"
+                "- **Reusable Candidate Bullets:**\n  - `Did beta`\n", encoding="utf-8")
+            (master / "education.md").write_text(
+                "## 1. School\n- **Institution:** Uni\n- **Degree:** MSc\n- **Coursework listed on CV:** Stats\n",
+                encoding="utf-8")
+            (master / "skills.md").write_text("## Data\n| Skill | Level |\n|---|---|\n| Python | A |\n", encoding="utf-8")
+
+            spec = r.baseline_markdown(root)
+            self.assertEqual(r.render_markdown(spec, root), r.render(root))
+            self.assertNotIn("Beta", spec)  # off-baseline project not in the master spec
+
+            tailored = (spec.replace("Analyst who ships.", "Analyst for finance.")
+                        .replace("### NewCo", "### OldCo").replace("- Built dashboards", "- Cleaned data rows")
+                        .replace("### OldCo\n\n- Cleaned data\n", "### NewCo\n\n- Built dashboards\n", 1)
+                        .replace("## Education", "### Beta\n\n- Did beta\n\n## Education"))
+            page = r.render_markdown(tailored, root)
+            self.assertIn("Analyst for finance.", page)
+            self.assertIn("Did beta", page)
+            self.assertLess(page.index("NewCo"), page.index("OldCo"))  # newest first whatever the spec order
+
+            with self.assertRaisesRegex(ValueError, "'Gamma' is not in content/master"):
+                r.render_markdown(spec.replace("### Alpha", "### Gamma"), root)
+            with self.assertRaisesRegex(ValueError, "employer 'OldCo' was dropped"):
+                r.render_markdown(spec.replace("### OldCo", "### NewCo"), root)
+
     def test_render_html_photo(self) -> None:
         import render_html as r
         with tempfile.TemporaryDirectory() as tmp:

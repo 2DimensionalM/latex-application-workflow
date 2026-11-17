@@ -26,7 +26,8 @@
         │     并在 PROJECT_STATUS.md 新增一行（三位编号 001、002…，只增不回收）
         ▼
 ④ 定制简历（本地私有，每个岗位一份）
-   versions/cv/targeted/{id}-resume-<company>-<role>-<location>.html
+   versions/cv/targeted/{id}-resume-<company>-<role>-<location>.md    ← Claude 只写这个 Markdown 规格
+   versions/cv/targeted/{id}-resume-<company>-<role>-<location>.html  ← 构建时由 render_html.py 生成
    只允许对母版里已有的事实做挑选、排序、改写，不能新增事实
         │  workspace.py build resume:<id>（无头 Chrome → PDF → 一页/留白质检）
         ▼
@@ -105,7 +106,7 @@ python3 -m venv .venv
 |---|---|
 | 统计卡片 | 岗位总数、已投递、准备中、流程中、已结束 |
 | Claude 模型 | 页面右上角选择：跟随 Claude Code 默认、Opus（质量最好）或 Sonnet（更快、更省）。选择保存在浏览器里，对之后的生成、修改和求职信都生效；进度面板会显示实际使用的模型 |
-| 新建申请 | 粘贴职位链接或 JD 文本，点"生成定制简历"。流程分两段：**① 服务器（Python，约 1 秒）**：抓取 JD（支持 LinkedIn、Workday 和带 JobPosting 结构化数据的招聘页），查重（同一链接不会登记两次），分配编号并建立 `targets/<slug>/`，写入原文 `jd.md` 和 `notes.md`，根据招聘页判断是否仍在招，用事实库生成一份母版简历副本并写好 `resume_version`，进展记为 Drafting Resume。**② Claude（`claude -p`）**：服务器先把规则（AGENTS.md、两个 SKILL.md、`tailoring.md`、`content.md`）、6 个事实文件和 `jd.md` 的全文直接放进提示词（经标准输入传入，约 35 KB；规则在前、JD 在后，方便连续生成时命中提示缓存），Claude 不必再逐个读取，只需并行读 `notes.md` 和简历副本（编辑工具要求先读；服务器算好页眉之后的行号，让它跳过联系方式）。同一岗位实测从 137 秒降到约 80 秒。然后它只做需要判断的部分——必要时把 JD 译成英文、补充 notes、写精简版 `tailoring.md`（只有三节：岗位与 Profile 方向、相对母版改了什么、诚实缺口；求职信规划和面试风险留到需要时再写）、改写简历、构建并看 PNG 质检。质检通过后服务器把进展改为 Reviewing Resume。抓不到 JD 或粘贴的是纯文本时，退回由 Claude 完成整个流程。进度面板逐步显示每一步，原始日志折叠在"原始日志"里 |
+| 新建申请 | 粘贴职位链接或 JD 文本，点"生成定制简历"。流程分两段：**① 服务器（Python，约 1 秒）**：抓取 JD（支持 LinkedIn、Workday 和带 JobPosting 结构化数据的招聘页），查重（同一链接不会登记两次），分配编号并建立 `targets/<slug>/`，写入原文 `jd.md` 和 `notes.md`，根据招聘页判断是否仍在招，写好 `resume_version`，进展记为 Drafting Resume。**② Claude（`claude -p`）**：服务器先把规则（AGENTS.md、两个 SKILL.md、`tailoring.md`、`content.md`）、6 个事实文件和 `jd.md` 的全文直接放进提示词（经标准输入传入，约 35 KB；规则在前、JD 在后，方便连续生成时命中提示缓存），Claude 不必再逐个读取，只需并行读 `notes.md` 和简历副本（编辑工具要求先读；服务器算好页眉之后的行号，让它跳过联系方式）。同一岗位实测从 137 秒降到约 80 秒。然后它只做需要判断的部分——必要时把 JD 译成英文、补充 notes、写精简版 `tailoring.md`（只有三节：岗位与 Profile 方向、相对母版改了什么、诚实缺口；求职信规划和面试风险留到需要时再写）、改写简历、构建并看 PNG 质检。质检通过后服务器把进展改为 Reviewing Resume。抓不到 JD 或粘贴的是纯文本时，退回由 Claude 完成整个流程。进度面板逐步显示每一步，原始日志折叠在"原始日志"里 |
 | 投递看板 | 编号、公司、职位、地点、登记日期、投递日期，按"准备中 / 已投递·流程中 / 已结束"分组。改"状态"会同步 `metadata.yaml` 与 `PROJECT_STATUS.md`（移动到对应分组；只有投递及之后的状态写入历史表） |
 | 简历预览 | 生成并显示该岗位的 PDF。预览使用系统字体以提速，源文件没变时直接复用上次的 PDF；`--publish` 正式发布时才加载网页字体 |
 | 求职信 | 调用 `claude -p` 按五段式规则起草，保存为 `targets/<slug>/cover_letter.md`（纯文本草稿，不走 LaTeX 构建） |
@@ -116,6 +117,34 @@ python3 -m venv .venv
 网页不会显示 `src/sections/header.private.tex`。
 
 ---
+
+### 定制简历的 Markdown 规格
+
+新申请的定制简历不再让 Claude 直接改 HTML，而是写一份 Markdown 规格 `versions/cv/targeted/<id>-resume-<slug>.md`（约 4 KB），构建时由 `scripts/render_html.py` 套模板生成 HTML：
+
+```markdown
+## Tagline
+Finance & Data Analytics · Forecasting
+## Profile
+MSc Data Science & Society student …
+## Experience
+### Vizard.ai
+- Automated creator screening with AI-generated Excel formulas, …
+## Projects
+### Gold Price & Gaokao Applicant Forecasting (R)
+- …
+## Education
+### Tilburg University
+Coursework: Business Intelligence for Data Science; …
+## Skills
+- Finance: Financial statement analysis, financial ratios, ROI analysis
+```
+
+- 规格里只能决定**选什么、怎么写**：标语、Profile、用哪些经历和项目、bullet 措辞、课程行、技能行。
+- 公司、职位、日期、地点、技术栈、链接、姓名、联系方式和照片全部由渲染器从事实库和私有页眉读取，规格改不了，Claude 也看不到联系方式。
+- 硬性校验：`###` 标题必须和事实库里的名字一致；任何一段正式工作经历都不能删；经历总是按时间倒序输出。违反时构建直接报错。
+- 在网页里"修改简历"或"恢复历史版本"操作的也是这份规格；预览时会重新构建。
+- 旧岗位（只有 `.html`、没有 `.md`）保持原来的方式，照常预览和修改。
 
 ## 四、命令速查
 
