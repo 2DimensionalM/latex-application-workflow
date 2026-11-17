@@ -107,7 +107,7 @@ def render_projects(text: str) -> str:
         m = re.search(r"\(([A-Z][a-z]{2} \d{4}(?: – [A-Z][a-z]{2} \d{4})?)\)", context) or DATE_RANGE.search(context)
         role = e(field(body, "Tech Stack"))
         repo = field(body, "Repository")
-        if repo:
+        if repo.startswith("http"):  # notes like 'private; do not link' are not links
             role += f' · <a href="{e(repo)}">GitHub</a>'
         out.append(entry(heading_name(heading), compact_dates(m[1] if m.re is not DATE_RANGE else m[0]) if m else "", role, bullets(body)))
     return "".join(out)
