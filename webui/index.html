@@ -33,7 +33,22 @@
   th { color:var(--muted); font-weight:500; font-size:12px; white-space:nowrap; }
   td.num, td.date { font-variant-numeric:tabular-nums; white-space:nowrap; color:var(--muted); }
   td select { width:auto; }
-  tr.group-head td { background:var(--soft); color:var(--muted); font-size:12px; font-weight:600; }
+  tbody.grp tr.group-head td { background:var(--soft); color:var(--ink); font-size:12.5px; font-weight:600; cursor:pointer; user-select:none; padding:9px 8px; }
+  tbody.grp tr.group-head:hover td { background:color-mix(in srgb, var(--soft) 70%, var(--accent) 12%); }
+  tr.group-head .chev { display:inline-block; width:14px; color:var(--muted); transition:transform .18s ease; }
+  tbody.grp.closed tr.group-head .chev { transform:rotate(-90deg); }
+  tbody.grp.closed tr:not(.group-head) { display:none; }
+  tr.group-head .cnt { display:inline-block; min-width:22px; margin-left:8px; padding:0 7px; border-radius:10px; font-size:11px; line-height:18px; text-align:center; background:var(--card); color:var(--muted); border:1px solid var(--rule); }
+  tbody.grp.hot tr.group-head td { background:color-mix(in srgb, var(--soft) 60%, var(--ok) 18%); }
+  tbody.grp.hot tr.group-head .cnt { background:var(--ok); border-color:var(--ok); color:#fff; }
+  tbody.grp.hot td:first-child { box-shadow:inset 3px 0 0 var(--ok); }
+  tbody.grp tr:not(.group-head):hover td { background:color-mix(in srgb, var(--card) 85%, var(--accent) 5%); }
+  .board-head { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px; }
+  .board-head h2 { margin:0; }
+  .board-tools { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  .board-tools input { width:220px; padding:6px 8px; }
+  .board-tools button { padding:5px 10px; font-size:12px; }
+  .stat.hot b { color:var(--ok); }
   .actions { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
   /* progress panel */
   .job { margin-top:12px; border:1px solid var(--rule); border-radius:8px; padding:12px; background:var(--bg); }
@@ -89,11 +104,18 @@
   </section>
 
   <section>
-    <h2>投递看板</h2>
+    <div class="board-head">
+      <h2>投递看板</h2>
+      <div class="board-tools">
+        <input type="text" id="filter" placeholder="搜索公司、职位或编号">
+        <button class="ghost" id="expandAll">全部展开</button>
+        <button class="ghost" id="collapseAll">全部收起</button>
+      </div>
+    </div>
     <div class="table-wrap">
-    <table>
+    <table id="rows">
       <thead><tr><th>编号</th><th>公司</th><th>职位</th><th class="hide-m">地点</th><th>登记</th><th>投递</th><th>状态</th><th>操作</th></tr></thead>
-      <tbody id="rows"><tr><td colspan="8" class="muted">加载中…</td></tr></tbody>
+      <tbody><tr><td colspan="8" class="muted">加载中…</td></tr></tbody>
     </table>
     </div>
   </section>
@@ -148,17 +170,49 @@ async function load() {
     let saved = ''; try { saved = localStorage.getItem(MODEL_KEY) || ''; } catch (e) {}
     $('modelSel').innerHTML = Object.entries(models).map(([k, v]) => `<option value="${k}" ${k === saved ? 'selected' : ''}>${esc(v)}</option>`).join('');
   }
-  const count = g => targets.filter(t => t.group === g).length;
+  lastLoad = {targets, labels};
+  const inView = id => targets.filter(t => viewGroup(t) === id).length;
   const applied = targets.filter(t => t.group >= 1).length;
   $('stats').innerHTML = [
-    [targets.length, '岗位总数'], [applied, '已投递(含结果)'], [count(0), '准备中'], [count(1), '流程中'], [count(2), '已结束'],
-  ].map(([n, l]) => `<div class="stat"><b>${n}</b><span>${l}</span></div>`).join('');
-  if (!targets.length) { $('rows').innerHTML = '<tr><td colspan="8" class="muted">还没有申请</td></tr>'; return; }
-  let html = '', last = -1;
-  for (const t of targets) {
-    if (t.group !== last) { last = t.group; html += `<tr class="group-head"><td colspan="8">${GROUPS[t.group]} · ${count(t.group)}</td></tr>`; }
-    const opts = labels.includes(t.progress) ? labels : [t.progress, ...labels];
-    html += `<tr>
+    [targets.length, '岗位总数', ''], [inView('interview'), '面试 / Offer', 'hot'], [count(targets, 0), '准备中', ''],
+    [applied, '已投递(含结果)', ''], [count(targets, 2), '已结束', ''],
+  ].map(([n, l, c]) => `<div class="stat ${c}"><b>${n}</b><span>${l}</span></div>`).join('');
+  renderRows();
+}
+
+// Board groups, top to bottom. Interview-stage roles come first; long finished groups start collapsed.
+const INTERVIEW = new Set(['Interview', 'Round 1', 'Round 2', 'Final Round', 'Follow-up Docs', 'Offer']);
+const VIEW = [
+  {id: 'interview', name: '面试 / Offer', open: true, hot: true},
+  {id: 'prep', name: '准备中', open: true},
+  {id: 'waiting', name: '已投递 · 等回复', open: false},
+  {id: 'ended', name: '已结束', open: false},
+];
+const viewGroup = t => INTERVIEW.has(t.progress) ? 'interview' : t.group === 0 ? 'prep' : t.group === 2 ? 'ended' : 'waiting';
+const count = (ts, g) => ts.filter(t => t.group === g).length;
+const OPEN_KEY = 'resume-workbench-open-groups';
+let lastLoad = {targets: [], labels: []};
+let openGroups = (() => { try { return JSON.parse(localStorage.getItem(OPEN_KEY)) || null; } catch (e) { return null; } })()
+  || Object.fromEntries(VIEW.map(g => [g.id, g.open]));
+const saveOpen = () => { try { localStorage.setItem(OPEN_KEY, JSON.stringify(openGroups)); } catch (e) {} };
+
+function renderRows() {
+  const {targets, labels} = lastLoad;
+  const q = $('filter').value.trim().toLowerCase();
+  const shown = q ? targets.filter(t => [t.id, t.company, t.role, t.location].some(v => String(v ?? '').toLowerCase().includes(q))) : targets;
+  const body = '<thead><tr><th>编号</th><th>公司</th><th>职位</th><th class="hide-m">地点</th><th>登记</th><th>投递</th><th>状态</th><th>操作</th></tr></thead>';
+  if (!targets.length) { $('rows').innerHTML = body + '<tbody><tr><td colspan="8" class="muted">还没有申请</td></tr></tbody>'; return; }
+  if (!shown.length) { $('rows').innerHTML = body + '<tbody><tr><td colspan="8" class="muted">没有匹配的岗位</td></tr></tbody>'; return; }
+  let html = body;
+  for (const g of VIEW) {
+    const rows = shown.filter(t => viewGroup(t) === g.id).sort((a, b) => b.id.localeCompare(a.id));  // newest first
+    if (!rows.length) continue;
+    const open = q ? true : openGroups[g.id] !== false && (openGroups[g.id] ?? g.open);
+    html += `<tbody class="grp ${open ? '' : 'closed'} ${g.hot ? 'hot' : ''}" data-group="${g.id}">
+      <tr class="group-head" data-toggle="${g.id}"><td colspan="8"><span class="chev">▾</span>${g.name}<span class="cnt">${rows.length}</span></td></tr>`;
+    for (const t of rows) {
+      const opts = labels.includes(t.progress) ? labels : [t.progress, ...labels];
+      html += `<tr>
       <td class="num">${esc(t.id)}</td>
       <td>${esc(t.company)}</td>
       <td>${esc(t.role)}</td>
@@ -172,9 +226,14 @@ async function load() {
         ${t.source_url ? `<a href="${esc(t.source_url)}" target="_blank" rel="noopener">职位页</a>` : ''}
       </div></td>
     </tr>`;
+    }
+    html += '</tbody>';
   }
   $('rows').innerHTML = html;
 }
+$('filter').oninput = renderRows;
+$('expandAll').onclick = () => { VIEW.forEach(g => openGroups[g.id] = true); saveOpen(); renderRows(); };
+$('collapseAll').onclick = () => { VIEW.forEach(g => openGroups[g.id] = false); saveOpen(); renderRows(); };
 
 // Progress panel: readable steps while Claude works, result at the end, raw log on demand.
 function watch(job, box, title, done) {
@@ -263,6 +322,11 @@ $('reviseGo').onclick = async () => {
 };
 
 $('rows').onclick = async e => {
+  const head = e.target.closest('tr.group-head');
+  if (head) {
+    const id = head.dataset.toggle, tb = head.parentElement;
+    openGroups[id] = tb.classList.contains('closed'); saveOpen(); tb.classList.toggle('closed'); return;
+  }
   const prev = e.target.dataset.prev, cl = e.target.dataset.cl;
   if (prev) {
     show(prev, '简历预览'); $('pv').hidden = false; $('openPdf').hidden = false; $('cl').hidden = true; $('clJob').innerHTML = '';
