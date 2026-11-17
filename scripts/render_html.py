@@ -104,7 +104,7 @@ def project_model(text: str) -> list[dict]:
     for heading, body in sections(text):
         context = field(body, "Context & Dates")
         # Prefer the dates in parentheses (project period) over data ranges in the text.
-        m = re.search(r"\(([A-Z][a-z]{2} \d{4}(?: – [A-Z][a-z]{2} \d{4})?)\)", context) or DATE_RANGE.search(context)
+        m = re.search(r"\(([A-Z][a-z]{2} \d{4}(?: – (?:[A-Z][a-z]{2} \d{4}|[Pp]resent))?)\)", context) or DATE_RANGE.search(context)
         role = e(field(body, "Tech Stack"))
         repo = field(body, "Repository")
         if repo.startswith("http"):  # notes like 'private; do not link' are not links
