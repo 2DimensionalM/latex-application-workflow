@@ -105,10 +105,11 @@ python3 -m venv .venv
 |---|---|
 | 统计卡片 | 岗位总数、已投递、准备中、流程中、已结束 |
 | Claude 模型 | 页面右上角选择：跟随 Claude Code 默认、Opus（质量最好）或 Sonnet（更快、更省）。选择保存在浏览器里，对之后的生成、修改和求职信都生效；进度面板会显示实际使用的模型 |
-| 新建申请 | 粘贴职位链接或 JD 文本，点"生成定制简历"。流程分两段：**① 服务器（Python，约 1 秒）**：抓取 JD（支持 LinkedIn、Workday 和带 JobPosting 结构化数据的招聘页），查重（同一链接不会登记两次），分配编号并建立 `targets/<slug>/`，写入原文 `jd.md` 和 `notes.md`，根据招聘页判断是否仍在招，用事实库生成一份母版简历副本并写好 `resume_version`，进展记为 Drafting Resume。**② Claude（`claude -p`）**：服务器先把规则（AGENTS.md、两个 SKILL.md、`tailoring.md`、`content.md`）、6 个事实文件和 `jd.md` 的全文直接放进提示词（经标准输入传入，约 35 KB；规则在前、JD 在后，方便连续生成时命中提示缓存），Claude 不必再逐个读取，只需并行读 `notes.md` 和简历副本（编辑工具要求先读；服务器算好页眉之后的行号，让它跳过联系方式）。同一岗位实测从 137 秒降到约 80 秒。然后它只做需要判断的部分——必要时把 JD 译成英文、补充 notes、写 `tailoring.md`、改写简历、构建并看 PNG 质检。质检通过后服务器把进展改为 Reviewing Resume。抓不到 JD 或粘贴的是纯文本时，退回由 Claude 完成整个流程。进度面板逐步显示每一步，原始日志折叠在"原始日志"里 |
+| 新建申请 | 粘贴职位链接或 JD 文本，点"生成定制简历"。流程分两段：**① 服务器（Python，约 1 秒）**：抓取 JD（支持 LinkedIn、Workday 和带 JobPosting 结构化数据的招聘页），查重（同一链接不会登记两次），分配编号并建立 `targets/<slug>/`，写入原文 `jd.md` 和 `notes.md`，根据招聘页判断是否仍在招，用事实库生成一份母版简历副本并写好 `resume_version`，进展记为 Drafting Resume。**② Claude（`claude -p`）**：服务器先把规则（AGENTS.md、两个 SKILL.md、`tailoring.md`、`content.md`）、6 个事实文件和 `jd.md` 的全文直接放进提示词（经标准输入传入，约 35 KB；规则在前、JD 在后，方便连续生成时命中提示缓存），Claude 不必再逐个读取，只需并行读 `notes.md` 和简历副本（编辑工具要求先读；服务器算好页眉之后的行号，让它跳过联系方式）。同一岗位实测从 137 秒降到约 80 秒。然后它只做需要判断的部分——必要时把 JD 译成英文、补充 notes、写精简版 `tailoring.md`（只有三节：岗位与 Profile 方向、相对母版改了什么、诚实缺口；求职信规划和面试风险留到需要时再写）、改写简历、构建并看 PNG 质检。质检通过后服务器把进展改为 Reviewing Resume。抓不到 JD 或粘贴的是纯文本时，退回由 Claude 完成整个流程。进度面板逐步显示每一步，原始日志折叠在"原始日志"里 |
 | 投递看板 | 编号、公司、职位、地点、登记日期、投递日期，按"准备中 / 已投递·流程中 / 已结束"分组。改"状态"会同步 `metadata.yaml` 与 `PROJECT_STATUS.md`（移动到对应分组；只有投递及之后的状态写入历史表） |
 | 简历预览 | 生成并显示该岗位的 PDF。预览使用系统字体以提速，源文件没变时直接复用上次的 PDF；`--publish` 正式发布时才加载网页字体 |
 | 求职信 | 调用 `claude -p` 按五段式规则起草，保存为 `targets/<slug>/cover_letter.md`（纯文本草稿，不走 LaTeX 构建） |
+| 面试准备 | 只在"面试 / Offer"分组的岗位上出现。点"生成面试准备"，Claude 用事实库、JD、`tailoring.md` 和求职信写出 `targets/<slug>/interview_prep.md`：岗位要点、可能被问的问题及回答提纲、诚实缺口怎么答、可以反问的问题、需要确认的事项 |
 | 修改简历 / 求职信 | 在"简历预览 / 修改"或"求职信 / 修改"下方输入修改要求，Claude 只改这一份文件，只用事实库里已有的内容；需要事实库没有的内容时会拒绝并说明。和新建申请一样，规则、事实文件、`jd.md`、`tailoring.md` 由服务器直接放进提示词，Claude 只读要改的那一份文件（简历从页眉之后开始读，不碰联系方式）。修改前当前版本自动备份到 `targets/<slug>/.history/`，简历改完会重新构建并质检。下方"历史版本"可一键恢复任意旧版（恢复前也会先备份当前版本，所以恢复本身可以撤销） |
 | 事实库 | 查看和编辑 6 个 `content/master/*.md`：预览 / 编辑切换，保存前检查文件是否被别处改过，旧版本自动备份到 `content/master/.history/`；一键"重新生成母版简历"并显示质检结果；查看母版 PDF |
 
@@ -140,7 +141,7 @@ python3 -m venv .venv
 |---|---|
 | [`scripts/render_html.py`](scripts/render_html.py) | 事实库 → HTML 母版简历的生成器（只打印输出路径，不打印内容） |
 | [`src/html/resume.template.html`](src/html/resume.template.html) | HTML 简历版式模板（只有样式与结构，不含个人内容） |
-| [`scripts/workspace.py`](scripts/workspace.py) | 新增 `.html` 构建入口：无头 Chrome 渲染、预览缓存、复用原 PDF 质检与防覆盖发布 |
+| [`scripts/workspace.py`](scripts/workspace.py) | 新增 `.html` 构建入口：无头 Chrome 渲染、预览缓存、复用原 PDF 质检与防覆盖发布；定制简历里出现事实库表格中标了 `Need verification` 的项目（如未核实的技能）时质检报错 |
 | [`webui/server.py`](webui/server.py)、[`webui/index.html`](webui/index.html) | 本地网页工作台 |
 | [`.agent/skills/targeted-resume-html/SKILL.md`](.agent/skills/targeted-resume-html/SKILL.md) | HTML 定制简历的阶段技能（替代 `targeted-resume` 的 LaTeX 步骤） |
 | [`.agent/rules/webui.md`](.agent/rules/webui.md) | 网页工作台的行为与安全边界 |

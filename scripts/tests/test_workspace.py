@@ -192,6 +192,21 @@ class WorkspaceTests(unittest.TestCase):
             (root / rec["entry"]).write_text("<html></html>", encoding="utf-8")
             self.assertEqual(w.dependencies(root, rec["entry"]), {rec["entry"]})
 
+    def test_unverified_terms_block_targeted_resumes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "content/master").mkdir(parents=True)
+            (root / "content/master/skills.md").write_text(
+                "| Skill | Level | Evidence |\n|---|---|---|\n| Python | Advanced | thesis |\n"
+                "| Tableau (basic) | Basic | to add — Need verification |\n| DeepSeek API | — | Need verification |\n",
+                encoding="utf-8")
+            (root / "content/master/skills.example.md").write_text("| Fake | x | Need verification |\n", encoding="utf-8")
+            terms = w.unverified_terms(root)
+            self.assertEqual(terms, ["Tableau", "DeepSeek API"])
+            page = "<style>.tableau{}</style><b>Skills</b><span>Python, Tableau (basic), dashboards</span>"
+            self.assertEqual(w.unverified_hits(page, terms), ["Tableau"])
+            self.assertEqual(w.unverified_hits("<span>Python, deepseeking</span>", terms), [])
+
     def test_render_html_photo(self) -> None:
         import render_html as r
         with tempfile.TemporaryDirectory() as tmp:

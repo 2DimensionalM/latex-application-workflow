@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import hashlib
+import html as htmllib
 import json
 import os
 from pathlib import Path
@@ -547,6 +548,27 @@ def render_png(pdf: Path) -> str | None:
         return None
 
 
+def unverified_terms(root: Path) -> list[str]:
+    """Names of master table rows flagged `Need verification` (e.g. 'Tableau', 'DeepSeek API')."""
+    terms = []
+    for md in sorted((root / "content/master").glob("*.md")):
+        if md.name == "README.md" or md.name.endswith(".example.md"):
+            continue
+        for line in md.read_text(encoding="utf-8").splitlines():
+            if line.startswith("|") and "Need verification" in line:
+                name = re.sub(r"\(.*?\)", "", line.strip().strip("|").split("|")[0]).strip(" *`")
+                if name and name not in terms:
+                    terms.append(name)
+    return terms
+
+
+def unverified_hits(html_text: str, terms: list[str]) -> list[str]:
+    """Terms that appear in the visible text of a resume HTML."""
+    body = re.sub(r"(?is)<(script|style)\b.*?</\1>", " ", html_text)
+    text = htmllib.unescape(re.sub(r"<[^>]+>", " ", body))
+    return [t for t in terms if re.search(rf"(?<![\w]){re.escape(t)}(?![\w])", text, re.I)]
+
+
 WEB_FONT_LINKS = re.compile(r"<link[^>]+fonts\.(?:googleapis|gstatic)\.com[^>]*>", re.I)
 
 
@@ -565,8 +587,10 @@ def build_html(root: Path, rec: dict, publish: bool = False) -> int:
     review_pdf = review / (rec["jobname"] + ".pdf")
     online_fonts = publish or os.environ.get("CV_ONLINE_FONTS") == "1"
     html_text = source.read_text(encoding="utf-8")
+    targeted = rec["entry"].startswith("versions/")  # the master itself may list unverified items
+    terms = unverified_terms(root) if targeted else []
     digest = hashlib.sha256(
-        (("online" if online_fonts else "offline") + html_text).encode("utf-8")
+        (("online" if online_fonts else "offline") + "|".join(terms) + html_text).encode("utf-8")
     ).hexdigest()
     qa_path = review / "qa.json"
     if not publish and review_pdf.is_file() and qa_path.is_file():
@@ -612,6 +636,8 @@ def build_html(root: Path, rec: dict, publish: bool = False) -> int:
     report = qa(review_pdf, rec["kind"], None)
     if clipped:
         report["errors"].append("content overflows the page box and is clipped; shorten content")
+    for term in unverified_hits(html_text, terms):
+        report["errors"].append(f"uses '{term}', which content/master marks Need verification; remove it")
     report["png"] = render_png(review_pdf)
     if publish:
         if report["errors"]:

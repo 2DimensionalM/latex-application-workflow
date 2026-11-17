@@ -241,6 +241,7 @@ function renderRows() {
       <td><div class="actions">
         ${t.resume_is_html ? `<button class="ghost" data-prev="${t.slug}">简历预览 / 修改</button>` : ''}
         <button class="ghost" data-cl="${t.slug}">${t.has_cover_letter ? '求职信 / 修改' : '生成求职信'}</button>
+        ${viewGroup(t) === 'interview' ? `<button class="ghost" data-ip="${t.slug}" data-has="${t.has_interview_prep ? 1 : ''}">${t.has_interview_prep ? '面试准备' : '生成面试准备'}</button>` : ''}
         ${t.source_url ? `<a href="${esc(t.source_url)}" target="_blank" rel="noopener">职位页</a>` : ''}
       </div></td>
     </tr>`;
@@ -345,7 +346,19 @@ $('rows').onclick = async e => {
     const id = head.dataset.toggle, tb = head.parentElement;
     openGroups[id] = tb.classList.contains('closed'); saveOpen(); tb.classList.toggle('closed'); return;
   }
-  const prev = e.target.dataset.prev, cl = e.target.dataset.cl;
+  const prev = e.target.dataset.prev, cl = e.target.dataset.cl, ip = e.target.dataset.ip;
+  if (ip) {
+    show(ip, '面试准备'); showRevise(null, null); $('pv').hidden = true; $('openPdf').hidden = true; $('pv').src = 'about:blank';
+    const fill = t => { $('clJob').innerHTML = ''; $('cl').hidden = false; $('cl').textContent = t; };
+    const {text} = await fetch(`/api/targets/${ip}/interview-prep`).then(r => r.json());
+    if (text) {
+      fill(text);
+      $('clJob').innerHTML = '<div class="actions" style="margin-top:8px"><button class="ghost" id="ipRedo">重新生成</button></div>';
+      $('ipRedo').onclick = () => startPrep(ip);
+      return;
+    }
+    return startPrep(ip);
+  }
   if (prev) {
     show(prev, '简历预览'); $('pv').hidden = false; $('openPdf').hidden = false; $('cl').hidden = true; $('clJob').innerHTML = '';
     $('pv').src = '/preview/' + prev; showRevise(prev, 'resume');
@@ -365,6 +378,16 @@ $('rows').onclick = async e => {
     });
   }
 };
+async function startPrep(slug) {
+  $('cl').hidden = true;
+  const r = await post(`/api/targets/${slug}/interview-prep`);
+  if (r.error) return alert(r.error);
+  watch(r.job, $('clJob'), '生成面试准备', async () => {
+    const t = await fetch(`/api/targets/${slug}/interview-prep`).then(r => r.json());
+    if (t.text) { $('cl').hidden = false; $('cl').textContent = t.text; }
+    load();
+  });
+}
 function show(slug, label) { $('viewer').hidden = false; $('vtitle').textContent = `${label} · ${slug}`; $('viewer').scrollIntoView({behavior:'smooth'}); }
 $('openPdf').onclick = () => window.open($('pv').src);
 $('closeV').onclick = () => { $('viewer').hidden = true; $('pv').src = 'about:blank'; };

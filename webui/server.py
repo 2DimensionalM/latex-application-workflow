@@ -124,6 +124,7 @@ def list_targets() -> list[dict]:
             "status": meta.get("status"), "progress": row[6] if row else "",
             "resume": resume, "resume_is_html": resume.endswith(".html"),
             "has_cover_letter": (folder / "cover_letter.md").is_file(),
+            "has_interview_prep": (folder / "interview_prep.md").is_file(),
             "date_saved": meta.get("date_saved") or "", "date_applied": applied.get(ident, ""),
             "group": group(row[6] if row else ""),
         })
@@ -410,10 +411,17 @@ def tailor_prompt(t: dict) -> str:
         "Your tasks:\n"
         f"1. If targets/{slug}/jd.md is not in English, translate the body faithfully into English (keep the header).\n"
         f"2. Add logistics and first fit signals to targets/{slug}/notes.md (from jd.md only).\n"
-        f"3. Write targets/{slug}/tailoring.md with the six modules of .agent/rules/tailoring.md (job-prewrite).\n"
+        f"3. Write a SHORT targets/{slug}/tailoring.md (aim for under 2 KB, bullet points) with only three sections: "
+        "'## Role & profile angle' (the role's core problem and the Profile direction, 2-4 lines); "
+        "'## Changes vs master' (only what differs from the master resume: Profile/tagline rewording, moved, cut or reworded "
+        "bullets, skills moved forward, projects kept or dropped; do not restate unchanged bullets or skills); "
+        "'## Honest gaps' (JD asks that the master cannot support, plus anything marked Need verification, which must stay off "
+        "the page). Skip the section plan, cover-letter plan and interview risks: the web UI writes those on demand later. "
+        "This overrides the six-module layout in .agent/rules/tailoring.md for web UI runs.\n"
         f"4. Tailor {entry} per .agent/skills/targeted-resume-html: only select, reorder and reword facts from "
         "content/master/*.md; no invented facts; keep dates/titles/numbers; experience reverse-chronological.\n"
-        f"5. Run `.venv/bin/python scripts/workspace.py build resume:{ident}` until qa.json has no errors, Read the "
+        f"5. Run `.venv/bin/python scripts/workspace.py build resume:{ident}` until qa.json has no errors (QA also fails "
+        "when a master item marked Need verification, such as an unverified skill, appears on the page), Read the "
         "PNG it writes for the visual check, then run `.venv/bin/python scripts/workspace.py check`.\n"
         f"The only files you still need to Read are targets/{slug}/notes.md and {entry} (the edit tools require a "
         f"Read first). Read both in one parallel batch at the start; Read the resume exactly once with offset "
@@ -469,9 +477,31 @@ def cover_prompt(slug: str) -> str:
         preloaded(provided) +
         f"Draft a cover letter for targets/{slug}/ following the targeted-cover-letter content rules above "
         "(five paragraphs, not a prose copy of the resume; ignore its LaTeX build steps). Use only facts present in "
-        "content/master/*.md and do not claim skills listed as gaps in tailoring.md. "
+        "content/master/*.md and do not claim skills listed as gaps in tailoring.md or anything marked Need verification. "
+        "If tailoring.md has no five-paragraph letter plan, plan the paragraphs yourself (do not add the plan to tailoring.md). "
         f"Write plain text/markdown to {out} and nothing else. {existing}"
         "Do not Read any other file. " + RUN_NOTES
+    )
+
+
+def interview_prompt(slug: str) -> str:
+    """Interview prep, written only once a role reaches the interview stage (not at tailoring time)."""
+    out = f"targets/{slug}/interview_prep.md"
+    folder = ROOT / "targets" / slug
+    provided = ["AGENTS.md", ".agent/rules/content.md", *MASTER_FACTS, f"targets/{slug}/jd.md", f"targets/{slug}/notes.md",
+                f"targets/{slug}/tailoring.md", *([f"targets/{slug}/cover_letter.md"] if (folder / "cover_letter.md").is_file() else [])]
+    existing = (f"{out} already exists: Read it once first (the Write tool requires it), then overwrite it. "
+                if (ROOT / out).is_file() else "")
+    return (
+        preloaded(provided) +
+        f"The owner has reached the interview stage for targets/{slug}/. Write interview prep to {out} in Chinese "
+        "(keep company, tool and role names in English), as short bullet points, with these sections: "
+        "'## 岗位要点' (what the role needs, 3-5 bullets); '## 可能被问的问题' (6-10 likely questions, each with a 2-3 line "
+        "answer outline built only from facts in content/master/*.md, citing the specific experience or project); "
+        "'## 诚实缺口怎么答' (each JD ask the master cannot support, and how to answer honestly with adjacent evidence); "
+        "'## 我可以问的问题' (3-5 specific questions about this team); '## 需要确认的事项' (start date, duration, location, "
+        "work authorisation and anything the master does not record). Never invent facts or numbers, never present "
+        f"Need verification items as held skills. Write only {out}. {existing}Do not Read any other file. " + RUN_NOTES
     )
 
 
@@ -594,6 +624,9 @@ class Handler(BaseHTTPRequestHandler):
             if m := re.fullmatch(r"/api/targets/([a-z0-9-]+)/cover-letter", path):
                 f = ROOT / "targets" / m[1] / "cover_letter.md"
                 return self.json({"text": f.read_text(encoding="utf-8") if self.known(m[1]) and f.is_file() else ""})
+            if m := re.fullmatch(r"/api/targets/([a-z0-9-]+)/interview-prep", path):
+                f = ROOT / "targets" / m[1] / "interview_prep.md"
+                return self.json({"text": f.read_text(encoding="utf-8") if self.known(m[1]) and f.is_file() else ""})
             if path == "/api/master":
                 return self.json({"files": master_list()})
             if m := re.fullmatch(r"/api/master/([a-z]+)", path):
@@ -681,6 +714,10 @@ class Handler(BaseHTTPRequestHandler):
                 if not self.known(m[1]):
                     return self.json({"error": "unknown target"}, 400)
                 return self.json({"job": start_job(cover_prompt(m[1]), model)})
+            if m := re.fullmatch(r"/api/targets/([a-z0-9-]+)/interview-prep", self.path):
+                if not self.known(m[1]):
+                    return self.json({"error": "unknown target"}, 400)
+                return self.json({"job": start_job(interview_prompt(m[1]), model)})
         except (ValueError, KeyError, OSError) as exc:
             return self.json({"error": str(exc)}, 500)
         self.json({"error": "not found"}, 404)
